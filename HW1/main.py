@@ -78,13 +78,15 @@ class My_Model(nn.Module):
         super(My_Model, self).__init__()
         # TODO: modify model's structure, be aware of dimensions. 
         self.layers = nn.Sequential(
-            nn.Linear(input_dim, 64),
+            nn.Linear(input_dim, 16),
             nn.ReLU(),
-            nn.Linear(64, 64),
+            nn.Linear(16, 8),
             nn.ReLU(),
-            nn.Linear(64, 64),
+            nn.Linear(8, 8),
             nn.ReLU(),
-            nn.Linear(64, 1)
+            nn.Linear(8, 8),
+            nn.ReLU(),
+            nn.Linear(8, 1)
         )
 
     def forward(self, x):
@@ -93,13 +95,31 @@ class My_Model(nn.Module):
         return x
 
 #%%
+def preprocess(train_data, test_data):
+    id_col = "id"
+    target = "tested_positive.4"
+    train_data = train_data.drop(['id'], axis=1)
+    test_data = test_data.drop(['id'], axis=1)
+    for col in train_data.columns:
+        if col in [id_col, target]:
+            continue
+        mean = train_data[col].mean()
+        std = train_data[col].std()
+        train_data[col] = (train_data[col] - mean) / std
+        test_data[col] = (test_data[col] - mean) / std
+
+    print(train_data.head())
+
+    return train_data.values, test_data.values
+
+#%%
 def select_feat(train_data, valid_data, test_data, select_all=True):
     '''Selects useful features to perform regression'''
     y_train, y_valid = train_data[:,-1], valid_data[:,-1]
     raw_x_train, raw_x_valid, raw_x_test = train_data[:,:-1], valid_data[:,:-1], test_data
 
     if select_all:
-        feat_idx = list(range(raw_x_train.shape[1]))
+        feat_idx = list(range(1, raw_x_train.shape[1]))
     else:
         feat_idx = [0,1,2,3,4] # TODO: Select suitable feature columns.
         
@@ -192,7 +212,8 @@ same_seed(config['seed'])
 
 # train_data size: 2699 x 118 (id + 37 states + 16 features x 5 days) 
 # test_data size: 1078 x 117 (without last day's positive rate)
-train_data, test_data = pd.read_csv('./data/covid.train.csv').values, pd.read_csv('./data/covid.test.csv').values
+train_data, test_data = pd.read_csv('./data/covid.train.csv'), pd.read_csv('./data/covid.test.csv')
+train_data, test_data = preprocess(train_data, test_data)
 train_data, valid_data = train_valid_split(train_data, config['valid_ratio'], config['seed'])
 
 # Print out the data size.
@@ -217,6 +238,7 @@ test_loader = DataLoader(test_dataset, batch_size=config['batch_size'], shuffle=
 
 #%%
 model = My_Model(input_dim=x_train.shape[1]).to(device) # put your model and data on the same computation device.
+model = nn.DataParallel(model)
 trainer(train_loader, valid_loader, model, config, device)
 
 #%%
@@ -233,8 +255,7 @@ def save_pred(preds, file):
             writer.writerow([i, p])
 
 model = My_Model(input_dim=x_train.shape[1]).to(device)
+model = nn.DataParallel(model)
 model.load_state_dict(torch.load(config['save_path']))
 preds = predict(test_loader, model, device) 
 save_pred(preds, 'pred.csv')         
-
-#%%
