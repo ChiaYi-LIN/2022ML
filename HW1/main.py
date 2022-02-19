@@ -101,14 +101,15 @@ def preprocess(train_data, test_data):
     train_data = train_data.drop(['id'], axis=1)
     test_data = test_data.drop(['id'], axis=1)
     for col in train_data.columns:
-        if col in [id_col, target]:
+        if col == target:
             continue
         mean = train_data[col].mean()
         std = train_data[col].std()
         train_data[col] = (train_data[col] - mean) / std
         test_data[col] = (test_data[col] - mean) / std
 
-    print(train_data.head())
+    for i in range(len(train_data.columns)):
+        print('{}: {}' .format(str(i), train_data.columns[i]))
 
     return train_data.values, test_data.values
 
@@ -119,9 +120,12 @@ def select_feat(train_data, valid_data, test_data, select_all=True):
     raw_x_train, raw_x_valid, raw_x_test = train_data[:,:-1], valid_data[:,:-1], test_data
 
     if select_all:
-        feat_idx = list(range(1, raw_x_train.shape[1]))
+        feat_idx = list(range(raw_x_train.shape[1]))
     else:
-        feat_idx = [0,1,2,3,4] # TODO: Select suitable feature columns.
+        # TODO: Select suitable feature columns.
+        feat_idx = [i for i in range(37)] + [52, 68, 84, 100]
+    
+    print('using features: ', feat_idx)
         
     return raw_x_train[:,feat_idx], raw_x_valid[:,feat_idx], raw_x_test[:,feat_idx], y_train, y_valid
 
@@ -133,7 +137,9 @@ def trainer(train_loader, valid_loader, model, config, device):
     # Define your optimization algorithm. 
     # TODO: Please check https://pytorch.org/docs/stable/optim.html to get more available algorithms.
     # TODO: L2 regularization (optimizer(weight decay...) or implement by your self).
-    optimizer = torch.optim.SGD(model.parameters(), lr=config['learning_rate'], momentum=0.9) 
+    # optimizer = torch.optim.SGD(model.parameters(), lr=config['learning_rate'], momentum=0.9) 
+    optimizer = torch.optim.Adam(model.parameters())
+    # optimizer = torch.optim.Adagrad(model.parameters())
 
     writer = SummaryWriter() # Writer of tensoboard.
 
@@ -196,7 +202,7 @@ def trainer(train_loader, valid_loader, model, config, device):
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 config = {
     'seed': 1126,      # Your seed number, you can pick your lucky number. :)
-    'select_all': True,   # Whether to use all features.
+    'select_all': False,   # Whether to use all features.
     'valid_ratio': 0.2,   # validation_size = train_size * valid_ratio
     'n_epochs': 3000,     # Number of epochs.            
     'batch_size': 256, 
