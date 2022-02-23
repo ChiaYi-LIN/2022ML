@@ -20,8 +20,11 @@ from torch.utils.data import Dataset, DataLoader, random_split
 from torch.utils.tensorboard import SummaryWriter
 
 #%%
-torch.cuda.is_available()
-
+if torch.cuda.is_available():
+    print('cuda is available')
+else:
+    print('cuda is not available')
+    
 #%%
 def same_seed(seed): 
     '''Fixes random number generator seeds for reproducibility.'''
@@ -80,13 +83,13 @@ class My_Model(nn.Module):
         self.layers = nn.Sequential(
             nn.Linear(input_dim, 16),
             nn.ReLU(),
-            nn.Linear(16, 8),
+            nn.Linear(16, 16),
             nn.ReLU(),
-            nn.Linear(8, 8),
+            nn.Linear(16, 16),
             nn.ReLU(),
-            nn.Linear(8, 8),
+            nn.Linear(16, 16),
             nn.ReLU(),
-            nn.Linear(8, 1)
+            nn.Linear(16, 1)
         )
 
     def forward(self, x):
@@ -100,18 +103,35 @@ def preprocess(train_data, test_data):
     target = "tested_positive.4"
     train_data = train_data.drop(['id'], axis=1)
     test_data = test_data.drop(['id'], axis=1)
-    for col in train_data.columns:
-        if col == target:
-            continue
-        mean = train_data[col].mean()
-        std = train_data[col].std()
-        train_data[col] = (train_data[col] - mean) / std
-        test_data[col] = (test_data[col] - mean) / std
+
+    # Normalize
+    # for i in range(len(train_data.columns)):
+    #     if i >= 37 and train_data.columns[i] != target:
+    #         col = train_data.columns[i]
+    #         mean_v = train_data[col].mean()
+    #         std_v = train_data[col].std()
+    #         train_data[col] = (train_data[col] - mean_v) / std_v
+    #         test_data[col] = (test_data[col] - mean_v) / std_v
 
     for i in range(len(train_data.columns)):
         print('{}: {}' .format(str(i), train_data.columns[i]))
 
+    data_corr = train_data.corr()
+    target_col = data_corr[train_data.columns[-1]]
+    feat_id = []
+    thr = 0.65
+    feature = target_col[(target_col >= thr) | (target_col <= -thr)]
+    for i in range(len(feature)):
+        col_id = train_data.columns.get_loc(feature.index[i])
+        if col_id == 116:
+            continue
+        feat_id.append(col_id)
+    print(feat_id)
+
     return train_data.values, test_data.values
+
+# train_data, test_data = pd.read_csv('./data/covid.train.csv'), pd.read_csv('./data/covid.test.csv')
+# train_data, test_data = preprocess(train_data, test_data)
 
 #%%
 def select_feat(train_data, valid_data, test_data, select_all=True):
@@ -123,8 +143,19 @@ def select_feat(train_data, valid_data, test_data, select_all=True):
         feat_idx = list(range(raw_x_train.shape[1]))
     else:
         # TODO: Select suitable feature columns.
-        feat_idx = [i for i in range(37)] + [52, 68, 84, 100]
-    
+        # feat_idx = [i for i in range(37)] + [37, 38, 39, 40, 52, 53, 54, 55, 56, 68, 69, 70, 71, 72, 84, 85, 86, 87, 88, 100, 101, 102, 103, 104]
+        # 0.35
+        # feat_idx = [37, 38, 39, 40, 43, 48, 49, 50, 52, 53, 54, 55, 56, 59, 64, 65, 66, 68, 69, 70, 71, 72, 75, 80, 81, 82, 84, 85, 86, 87, 88, 91, 92, 96, 97, 98, 100, 101, 102, 103, 104, 107, 108, 112, 113, 114]
+        # 0.4
+        # feat_idx = [37, 38, 39, 40, 43, 48, 49, 50, 52, 53, 54, 55, 56, 59, 64, 65, 66, 68, 69, 70, 71, 72, 75, 80, 81, 82, 84, 85, 86, 87, 88, 91, 96, 97, 98, 100, 101, 102, 103, 104, 107, 112, 113, 114]
+        # 0.45
+        # feat_idx = [37, 38, 39, 40, 43, 49, 50, 52, 53, 54, 55, 56, 59, 65, 66, 68, 69, 70, 71, 72, 75, 81, 82, 84, 85, 86, 87, 88, 91, 97, 98, 100, 101, 102, 103, 104, 107, 113, 114]
+        # 0.5
+        # feat_idx = [37, 38, 39, 40, 43, 49, 52, 53, 54, 55, 56, 59, 65, 68, 69, 70, 71, 72, 75, 81, 84, 85, 86, 87, 88, 91, 97, 100, 101, 102, 103, 104, 107, 113]
+        # 0.6
+        # feat_idx = [37, 38, 39, 40, 49, 52, 53, 54, 55, 56, 65, 68, 69, 70, 71, 72, 81, 84, 85, 86, 87, 88, 97, 100, 101, 102, 103, 104, 107, 113]
+        # 0.65
+        feat_idx = [37, 38, 39, 40, 52, 53, 54, 55, 56, 68, 69, 70, 71, 72, 84, 85, 86, 87, 88, 100, 101, 102, 103, 104]
     print('using features: ', feat_idx)
         
     return raw_x_train[:,feat_idx], raw_x_valid[:,feat_idx], raw_x_test[:,feat_idx], y_train, y_valid
@@ -137,9 +168,9 @@ def trainer(train_loader, valid_loader, model, config, device):
     # Define your optimization algorithm. 
     # TODO: Please check https://pytorch.org/docs/stable/optim.html to get more available algorithms.
     # TODO: L2 regularization (optimizer(weight decay...) or implement by your self).
-    # optimizer = torch.optim.SGD(model.parameters(), lr=config['learning_rate'], momentum=0.9) 
-    optimizer = torch.optim.Adam(model.parameters())
-    # optimizer = torch.optim.Adagrad(model.parameters())
+    optimizer = torch.optim.SGD(model.parameters(), lr=config['learning_rate'], momentum=config['momentum'], weight_decay=config['weight_decay'], nesterov=config['nesterov']) 
+    # optimizer = torch.optim.Adam(model.parameters(), weight_decay=config['weight_decay'])
+    # optimizer = torch.optim.AdamW(model.parameters())
 
     writer = SummaryWriter() # Writer of tensoboard.
 
@@ -203,10 +234,13 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 config = {
     'seed': 1126,      # Your seed number, you can pick your lucky number. :)
     'select_all': False,   # Whether to use all features.
-    'valid_ratio': 0.2,   # validation_size = train_size * valid_ratio
-    'n_epochs': 3000,     # Number of epochs.            
-    'batch_size': 256, 
-    'learning_rate': 1e-5,              
+    'valid_ratio': 0.1,   # validation_size = train_size * valid_ratio
+    'n_epochs': 6000,     # Number of epochs.            
+    'batch_size': 8, 
+    'learning_rate': 1e-6,
+    'momentum': 0.9,
+    'weight_decay': 0.1,
+    'nesterov': False,         
     'early_stop': 400,    # If model has not improved for this many consecutive epochs, stop training.     
     'save_path': './models/model.ckpt'  # Your model will be saved here.
 }
@@ -265,3 +299,4 @@ model = nn.DataParallel(model)
 model.load_state_dict(torch.load(config['save_path']))
 preds = predict(test_loader, model, device) 
 save_pred(preds, 'pred.csv')         
+#%%
