@@ -15,6 +15,8 @@ from tqdm import tqdm
 
 def load_feat(path):
     feat = torch.load(path)
+    # print(feat.shape)
+    # print(feat)
     return feat
 
 def shift(x, n):
@@ -78,38 +80,49 @@ def preprocess_data(split, feat_dir, phone_path, concat_nframes, train_ratio=0.8
     usage_list = [line.strip('\n') for line in usage_list]
     print('[Dataset] - # phone classes: ' + str(class_num) + ', number of utterances for ' + split + ': ' + str(len(usage_list)))
 
-    max_len = 3000000
-    X = torch.empty(max_len, concat_nframes, 39)
+    # max_len = 3000000
+    X = []
     if mode != 'test':
-      y = torch.empty(max_len, dtype=torch.long)
+      y = []
 
-    idx = 0
+    # idx = 0
     for i, fname in tqdm(enumerate(usage_list)):
-        feat = load_feat(os.path.join(feat_dir, mode, f'{fname}.pt'))
+        feat = load_feat(os.path.join(feat_dir, mode, f'{fname}.pt')).tolist()
         # print('feat =', feat.shape)
         
-        cur_len = len(feat)
-        feat = concat_feat(feat, concat_nframes)
+        # cur_len = len(feat)
+        # feat = concat_feat(feat, concat_nframes)
+        # if mode != 'test':
+        #   label = torch.LongTensor(label_dict[fname])
         if mode != 'test':
-          label = torch.LongTensor(label_dict[fname])
+          label = label_dict[fname]
 
-        X[idx: idx + cur_len, :] = feat
+        # X[idx: idx + cur_len, :] = feat
+        X.append(feat)
         if mode != 'test':
-          y[idx: idx + cur_len] = label
+        #   y[idx: idx + cur_len] = label
+            y.append(label)
 
-        idx += cur_len
+        # idx += cur_len
 
-    X = X[:idx, :]
+    # X = X[:idx, :]
+    # if mode != 'test':
+    #   y = y[:idx]
+
     if mode != 'test':
-      y = y[:idx]
+      df = {'X': X, 'y': y}
+    else:
+      df = {'X': X}
+    df = pd.DataFrame(df)
 
     print(f'[INFO] {split} set')
-    print(X.shape)
+    # print(df.head(5))
+    # print(df.shape)
     if mode != 'test':
-      print(y.shape)
-      return X, y
+    #   print(y.shape)
+      return df.X.values, df.y.values
     else:
-      return X
+      return df.X.values
 
 
 #%% [markdown]
@@ -119,23 +132,43 @@ def preprocess_data(split, feat_dir, phone_path, concat_nframes, train_ratio=0.8
 import torch
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
+from torch.nn.utils.rnn import pad_sequence
 
 class LibriDataset(Dataset):
     def __init__(self, X, y=None):
         self.data = X
         if y is not None:
-            self.label = torch.LongTensor(y)
+            self.label = y
         else:
             self.label = None
+        
+        self.cnt = 0
+        for row in X:
+            self.cnt += len(row)
 
     def __getitem__(self, idx):
         if self.label is not None:
             return self.data[idx], self.label[idx]
         else:
-            return self.data[idx]
+            return torch.FloatTensor(self.data[idx])
 
     def __len__(self):
         return len(self.data)
+
+    def collate_fn(self, batch):
+        seq_vec, seq_label, lengths = zip(*[
+            (torch.FloatTensor(vec), torch.LongTensor(label), len(vec))
+            for (vec, label) in sorted(batch, key=lambda x: len(x[0]), reverse=True)
+        ])
+
+        padded_seq_vec = pad_sequence(seq_vec, batch_first=True, padding_value=0)
+        # print(padded_seq_vec.shape)
+        # print(torch.LongTensor(seq_label).shape)
+
+        padded_sequ_label = pad_sequence(seq_label, batch_first=True, padding_value=-100)
+        # print('padded_sequ_label', padded_sequ_label.shape)
+
+        return padded_seq_vec, padded_sequ_label, torch.LongTensor(lengths)
 
 
 #%% [markdown]
@@ -145,36 +178,60 @@ class LibriDataset(Dataset):
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torch.nn.utils.rnn as rnn
+class BasicBlock(nn.Module):
+    def __init__(self, input_dim, output_dim, dropout):
+        super(BasicBlock, self).__init__()
+        self.block = nn.Sequential(
+            nn.Linear(input_dim, output_dim),
+            # nn.BatchNorm1d(output_dim),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+        )
+
+    def forward(self, x):
+        x = self.block(x)
+        return x
 
 class Classifier(nn.Module):
-    def __init__(self, input_dim, output_dim=41, hidden_layers=1, hidden_dim=256, dropout=0):
+    def __init__(self, input_dim, output_dim=41, hidden_layers=1, hidden_dim=256, dropout=0, bidirectional=False):
         super(Classifier, self).__init__()
-
+        self.bidirectional = bidirectional
         self.lstm = nn.LSTM(input_size=input_dim,
                             hidden_size=hidden_dim,
                             num_layers=hidden_layers,
                             batch_first=True,
                             dropout=dropout,
-                            bidirectional=False)
+                            bidirectional=bidirectional)
         
-        # self.fc = nn.Linear(2 * hidden_dim, output_dim) # bidirectional
-        self.fc = nn.Linear(hidden_dim, output_dim)
+        if self.bidirectional:
+            # self.fc = nn.Linear(2 * hidden_dim, output_dim) # bidirectional
+            self.fc = nn.Sequential(
+                # *[BasicBlock(2 * hidden_dim, 2 * hidden_dim, dropout) for _ in range(hidden_layers)],
+                nn.Linear(2 * hidden_dim, output_dim)
+            )
+        else:
+            # self.fc = nn.Linear(hidden_dim, output_dim)
+            self.fc = nn.Sequential(
+                # *[BasicBlock(hidden_dim, hidden_dim, dropout) for _ in range(hidden_layers)],
+                nn.Linear(hidden_dim, output_dim)
+            )
 
-    def forward(self, x):
+    def forward(self, x, lengths=None):
         # print('x =', x.shape)
         
-        out, (h, c) = self.lstm(x)
-        # print('h =', h.shape)
+        # pack sequence
+        packed_x = rnn.pack_padded_sequence(x, lengths, batch_first=True)
 
-        # hidden = torch.cat((h[-2,:,:], h[-1,:,:]), dim = 1) #bidirectional
-        hidden = h[-1,:,:]
-        # print('hidden =', hidden.shape)
+        # packed_out, h = self.gru(pack_embeds)
+        packed_out, (h, c) = self.lstm(packed_x)
 
-        dense_outputs = self.fc(hidden)
-        # print('dense_outputs =', dense_outputs.shape)
+        out, _ = rnn.pad_packed_sequence(packed_out, batch_first=True)
 
-        outputs = F.softmax(dense_outputs, dim=1)
-        # print('outputs =', outputs.shape)
+        tag_space = self.fc(out) # tag_space = torch.Size([batch size, seq length, num_class])
+        # print('tag_space = ', tag_space.shape)
+        
+        outputs = tag_space.transpose(-1, 1) # outputs = torch.Size([batch size, num_class, seq length])
 
         return outputs
 
@@ -183,21 +240,25 @@ class Classifier(nn.Module):
 
 #%%
 # data prarameters
-concat_nframes = 5              # the number of frames to concat with, n must be odd (total 2k+1 = n frames)
+concat_nframes = 3              # the number of frames to concat with, n must be odd (total 2k+1 = n frames)
 train_ratio = 0.8               # the ratio of data used for training, the rest will be used for validation
 
 # training parameters
 seed = 1121326                        # random seed
-batch_size = 512                # batch size
-num_epoch = 100                   # the number of training epoch
-learning_rate = 1e-4          # learning rate
+batch_size = 16                # batch size
+num_epoch = 70                   # the number of training epoch
+learning_rate = 1e-3          # learning rate
 model_path = './model.ckpt'     # the path where the checkpoint will be saved
 
 # model parameters
 input_dim = 39 # the input dim of the model, you should not change the value
-hidden_layers = 1               # the number of hidden layers
+hidden_layers = 8               # the number of hidden layers
 hidden_dim = 128                # the hidden dim
-dropout = 0
+dropout = 0.35
+bidirectional = True
+
+# scheduler
+# step_size = 20
 
 #%% [markdown]
 # ## Prepare dataset and model
@@ -212,14 +273,16 @@ val_X, val_y = preprocess_data(split='val', feat_dir='./libriphone/feat', phone_
 # get dataset
 train_set = LibriDataset(train_X, train_y)
 val_set = LibriDataset(val_X, val_y)
+print('train_set cnt =', train_set.cnt)
+print('val_set cnt =', val_set.cnt)
 
 # remove raw feature to save memory
 del train_X, train_y, val_X, val_y
 gc.collect()
 
 # get dataloader
-train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True)
-val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=False)
+train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, collate_fn=train_set.collate_fn)
+val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=False, collate_fn=val_set.collate_fn)
 
 #%%
 import os
@@ -246,9 +309,10 @@ def same_seeds(seed):
 same_seeds(seed)
 
 # create model, define a loss function, and optimizer
-model = Classifier(input_dim=input_dim, hidden_layers=hidden_layers, hidden_dim=hidden_dim, dropout=dropout).to(device)
+model = Classifier(input_dim=input_dim, hidden_layers=hidden_layers, hidden_dim=hidden_dim, dropout=dropout, bidirectional=bidirectional).to(device)
 criterion = nn.CrossEntropyLoss() 
 optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
+# scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=step_size)
 
 #%% [markdown]
 # ## Training
@@ -264,19 +328,32 @@ for epoch in range(num_epoch):
     # training
     model.train() # set the model to training mode
     for i, batch in enumerate(tqdm(train_loader)):
-        features, labels = batch
+        features, labels, lengths = batch
         features = features.to(device)
         labels = labels.to(device)
+        # print('features =', features.shape)
+        # print('labels =', labels.shape)
+        # print('lengths =', lengths.shape)
+        # print(lengths)
         
         optimizer.zero_grad() 
-        outputs = model(features) 
+        outputs = model(features, lengths)
         
         loss = criterion(outputs, labels)
         loss.backward() 
         optimizer.step() 
         
         _, train_pred = torch.max(outputs, 1) # get the index of the class with the highest probability
-        train_acc += (train_pred.detach() == labels.detach()).sum().item()
+        # print('train_pred =', train_pred.shape)
+        for j in range(len(labels)):
+            gt_vec = labels[j][:lengths[j]]
+            pred_vec = train_pred[j][:lengths[j]]
+            # print('gt_vec =', gt_vec.shape)
+            # print(gt_vec)
+            # print('pred_vec =', pred_vec.shape)
+            # print(pred_vec)
+            train_acc += (pred_vec == gt_vec).sum().item()
+            
         train_loss += loss.item()
     
     # validation
@@ -284,30 +361,39 @@ for epoch in range(num_epoch):
         model.eval() # set the model to evaluation mode
         with torch.no_grad():
             for i, batch in enumerate(tqdm(val_loader)):
-                features, labels = batch
+                features, labels, lengths = batch
                 features = features.to(device)
                 labels = labels.to(device)
-                outputs = model(features)
+                outputs = model(features, lengths)
                 
                 loss = criterion(outputs, labels) 
                 
                 _, val_pred = torch.max(outputs, 1) 
-                val_acc += (val_pred.cpu() == labels.cpu()).sum().item() # get the index of the class with the highest probability
+                for j in range(len(labels)):
+                    gt_vec = labels[j][:lengths[j]]
+                    pred_vec = val_pred[j][:lengths[j]]
+                    # print('gt_vec =', gt_vec.shape)
+                    # print(gt_vec)
+                    # print('pred_vec =', pred_vec.shape)
+                    # print(pred_vec)
+                    val_acc += (pred_vec == gt_vec).sum().item()
                 val_loss += loss.item()
 
             print('[{:03d}/{:03d}] Train Acc: {:3.6f} Loss: {:3.6f} | Val Acc: {:3.6f} loss: {:3.6f}'.format(
-                epoch + 1, num_epoch, train_acc/len(train_set), train_loss/len(train_loader), val_acc/len(val_set), val_loss/len(val_loader)
+                epoch + 1, num_epoch, train_acc/train_set.cnt, train_loss/len(train_loader), val_acc/val_set.cnt, val_loss/len(val_loader)
             ))
 
             # if the model improves, save a checkpoint at this epoch
             if val_acc > best_acc:
                 best_acc = val_acc
                 torch.save(model.state_dict(), model_path)
-                print('saving model with acc {:.3f}'.format(best_acc/len(val_set)))
+                print('saving model with acc {:.3f}'.format(best_acc/val_set.cnt))
     else:
         print('[{:03d}/{:03d}] Train Acc: {:3.6f} Loss: {:3.6f}'.format(
-            epoch + 1, num_epoch, train_acc/len(train_set), train_loss/len(train_loader)
+            epoch + 1, num_epoch, train_acc/train_set.cnt, train_loss/len(train_loader)
         ))
+    
+    # scheduler.step()
 
 # if not validating, save the last epoch
 if len(val_set) == 0:
@@ -327,11 +413,11 @@ gc.collect()
 # load data
 test_X = preprocess_data(split='test', feat_dir='./libriphone/feat', phone_path='./libriphone', concat_nframes=concat_nframes)
 test_set = LibriDataset(test_X, None)
-test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False)
+test_loader = DataLoader(test_set, batch_size=1, shuffle=False)
 
 #%%
 # load model
-model = Classifier(input_dim=input_dim, hidden_layers=hidden_layers, hidden_dim=hidden_dim).to(device)
+model = Classifier(input_dim=input_dim, hidden_layers=hidden_layers, hidden_dim=hidden_dim, dropout=dropout, bidirectional=bidirectional).to(device)
 model.load_state_dict(torch.load(model_path))
 
 #%% [markdown]
@@ -348,10 +434,14 @@ with torch.no_grad():
         features = batch
         features = features.to(device)
 
-        outputs = model(features)
-
+        outputs = model(features, [features.shape[1]])
+        # print('outputs = ', outputs.shape)
+        
         _, test_pred = torch.max(outputs, 1) # get the index of the class with the highest probability
-        pred = np.concatenate((pred, test_pred.cpu().numpy()), axis=0)
+        # print('test_pred = ', test_pred.shape)
+
+        pred = np.append(pred, test_pred.cpu().numpy())
+        # print('pred = ', pred.shape)
 
 
 #%% [markdown]
@@ -360,7 +450,7 @@ with torch.no_grad():
 # After finish running this block, download the file `prediction.csv` from the files section on the left-hand side and submit it to Kaggle.
 
 #%%
-with open('prediction.csv', 'w') as f:
+with open('rnn_pred.csv', 'w') as f:
     f.write('Id,Class\n')
     for i, y in enumerate(pred):
         f.write('{},{}\n'.format(i, y))
