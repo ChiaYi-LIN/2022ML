@@ -246,7 +246,7 @@ train_ratio = 0.8               # the ratio of data used for training, the rest 
 # training parameters
 seed = 1121326                        # random seed
 batch_size = 16                # batch size
-num_epoch = 70                   # the number of training epoch
+num_epoch = 100                   # the number of training epoch
 learning_rate = 1e-3          # learning rate
 model_path = './model.ckpt'     # the path where the checkpoint will be saved
 
