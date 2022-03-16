@@ -21,7 +21,7 @@ Notes: if the links are dead, you can download the data directly from Kaggle and
 
 """# Training"""
 
-_exp_name = "sample"
+_exp_name = "data_aug_w_residual"
 
 # Import necessary packages.
 import numpy as np
@@ -29,7 +29,9 @@ import pandas as pd
 import torch
 import os
 import torch.nn as nn
+from torchvision.utils import save_image
 import torchvision.transforms as transforms
+import torchvision.models as models
 from PIL import Image
 # "ConcatDataset" and "Subset" are possibly useful when doing semi-supervised learning.
 from torch.utils.data import ConcatDataset, DataLoader, Subset, Dataset
@@ -39,9 +41,30 @@ from torchvision.datasets import DatasetFolder, VisionDataset
 from tqdm.auto import tqdm
 import random
 
-myseed = 6666  # set a random seed for reproducibility
+# For plotting learning curve
+from torch.utils.tensorboard import SummaryWriter
+
+# "cuda" only when GPUs are available.
+if torch.cuda.is_available():
+    print('cuda is available')
+else:
+    print('cuda is not available')
+device = "cuda" if torch.cuda.is_available() else "cpu"
+
+_dataset_dir = "./food11"
+
+batch_size = 64
+
+# The number of training epochs and patience.
+n_epochs = 200
+patience = 300 # If no improvement in 'patience' epochs, early stop
+
+# set a random seed for reproducibility
+myseed = 6666 
+
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
+random.seed(myseed)
 np.random.seed(myseed)
 torch.manual_seed(myseed)
 if torch.cuda.is_available():
@@ -60,13 +83,30 @@ test_tfm = transforms.Compose([
     transforms.ToTensor(),
 ])
 
+p_tfm = 0.9
 # However, it is also possible to use augmentation in the testing phase.
 # You may use train_tfm to produce a variety of images and then test using ensemble methods
 train_tfm = transforms.Compose([
+    transforms.RandomRotation(degrees=30, expand=True),
     # Resize the image into a fixed shape (height = width = 128)
     transforms.Resize((128, 128)),
     # You may add some transforms here.
+    
+    transforms.RandomHorizontalFlip(p=0.5),
+    transforms.ColorJitter(brightness=0.4, contrast=0.2, saturation=0.02, hue=0.02),
+    transforms.RandomPerspective(distortion_scale=0.5, p=0.2),
+    transforms.RandomPosterize(bits=4, p=0.2),
+    transforms.RandomAdjustSharpness(sharpness_factor=0, p=0.2),
+    transforms.RandomAutocontrast(p=0.3),
+    # transforms.GaussianBlur(kernel_size=(1,3), sigma=(0.1, 1)),
+    # transforms.RandomEqualize(p=0.2),
+
     # ToTensor() should be the last one of the transforms.
+    transforms.ToTensor(),
+])
+
+no_tfm = transforms.Compose([
+    transforms.Resize((128, 128)),
     transforms.ToTensor(),
 ])
 
@@ -76,7 +116,7 @@ The data is labelled by the name, so we load images and label while calling '__g
 
 class FoodDataset(Dataset):
 
-    def __init__(self,path,tfm=test_tfm,files = None):
+    def __init__(self,path,tfm=test_tfm, files=None, no_tfm=no_tfm, p=p_tfm):
         super(FoodDataset).__init__()
         self.path = path
         self.files = sorted([os.path.join(path,x) for x in os.listdir(path) if x.endswith(".jpg")])
@@ -84,6 +124,8 @@ class FoodDataset(Dataset):
             self.files = files
         print(f"One {path} sample",self.files[0])
         self.transform = tfm
+        self.no_transform = no_tfm
+        self.p = p
   
     def __len__(self):
         return len(self.files)
@@ -91,7 +133,10 @@ class FoodDataset(Dataset):
     def __getitem__(self,idx):
         fname = self.files[idx]
         im = Image.open(fname)
-        im = self.transform(im)
+        if (random.uniform(0, 1) < self.p):
+            im = self.transform(im)
+        else:
+            im = self.no_transform(im)
         #im = self.data[idx]
         try:
             label = int(fname.split("/")[-1].split("_")[0])
@@ -141,27 +186,101 @@ class Classifier(nn.Module):
 
     def forward(self, x):
         out = self.cnn(x)
+        # flatten
         out = out.view(out.size()[0], -1)
         return self.fc(out)
 
-batch_size = 64
-_dataset_dir = "./food11"
+class Residual_Network(nn.Module):
+    def __init__(self):
+        super(Residual_Network, self).__init__()
+        
+        self.cnn_layer1 = nn.Sequential(
+            nn.Conv2d(3, 64, 3, 1, 1),
+            nn.BatchNorm2d(64),
+        )
+
+        self.cnn_layer2 = nn.Sequential(
+            nn.Conv2d(64, 64, 3, 1, 1),
+            nn.BatchNorm2d(64),
+        )
+
+        self.cnn_layer3 = nn.Sequential(
+            nn.Conv2d(64, 128, 3, 2, 1),
+            nn.BatchNorm2d(128),
+        )
+
+        self.cnn_layer4 = nn.Sequential(
+            nn.Conv2d(128, 128, 3, 1, 1),
+            nn.BatchNorm2d(128),
+        )
+        self.cnn_layer5 = nn.Sequential(
+            nn.Conv2d(128, 256, 3, 2, 1),
+            nn.BatchNorm2d(256),
+        )
+        self.cnn_layer6 = nn.Sequential(
+            nn.Conv2d(256, 256, 3, 1, 1),
+            nn.BatchNorm2d(256),
+        )
+        self.fc_layer = nn.Sequential(
+            nn.Linear(256* 32* 32, 256),
+            nn.ReLU(),
+            nn.Linear(256, 11)
+        )
+        self.relu = nn.ReLU()
+
+    def forward(self, x):
+        # input (x): [batch_size, 3, 128, 128]
+        # output: [batch_size, 11]
+
+        # Extract features by convolutional layers.
+        x1 = self.cnn_layer1(x)
+        
+        x1 = self.relu(x1)
+        residual = x1
+        x2 = self.cnn_layer2(x1)
+        x2 += residual
+        x2 = self.relu(x2)
+        
+        x3 = self.cnn_layer3(x2)
+        
+        x3 = self.relu(x3)
+        residual = x3
+        x4 = self.cnn_layer4(x3)
+        x4 += residual
+        x4 = self.relu(x4)
+        
+        x5 = self.cnn_layer5(x4)
+        
+        x5 = self.relu(x5)
+        residual = x5
+        x6 = self.cnn_layer6(x5)
+        x6 += residual
+        x6 = self.relu(x6)
+        
+        # The extracted feature map must be flatten before going to fully-connected layers.
+        xout = x6.flatten(1)
+
+        # The features are transformed by fully-connected layers to obtain the final logits.
+        xout = self.fc_layer(xout)
+        return xout
+
+"""# Training """
 # Construct datasets.
 # The argument "loader" tells how torchvision reads the data.
-train_set = FoodDataset(os.path.join(_dataset_dir,"training"), tfm=train_tfm)
+train_set = FoodDataset(os.path.join(_dataset_dir,"training"), tfm=train_tfm, no_tfm=no_tfm, p=p_tfm)
 train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=0, pin_memory=True)
-valid_set = FoodDataset(os.path.join(_dataset_dir,"validation"), tfm=test_tfm)
+valid_set = FoodDataset(os.path.join(_dataset_dir,"validation"), tfm=test_tfm, no_tfm=no_tfm, p=p_tfm)
 valid_loader = DataLoader(valid_set, batch_size=batch_size, shuffle=True, num_workers=0, pin_memory=True)
 
-# "cuda" only when GPUs are available.
-device = "cuda" if torch.cuda.is_available() else "cpu"
-
-# The number of training epochs and patience.
-n_epochs = 4
-patience = 300 # If no improvement in 'patience' epochs, early stop
+aug_set = FoodDataset(os.path.join(_dataset_dir,"aug"), tfm=train_tfm, no_tfm=no_tfm, p=p_tfm)
+aug_loader = DataLoader(aug_set, batch_size=1, shuffle=False, num_workers=0, pin_memory=True)
+for i in range(10):
+    for imgs, labels in aug_loader:
+        save_image(imgs[0], 'transform_'+str(i)+'.jpg')
 
 # Initialize a model, and put it on the device specified.
-model = Classifier().to(device)
+model = Residual_Network().to(device)
+model = nn.DataParallel(model)
 
 # For the classification task, we use cross-entropy as the measurement of performance.
 criterion = nn.CrossEntropyLoss()
@@ -169,12 +288,18 @@ criterion = nn.CrossEntropyLoss()
 # Initialize optimizer, you may fine-tune some hyperparameters such as learning rate on your own.
 optimizer = torch.optim.Adam(model.parameters(), lr=0.0003, weight_decay=1e-5) 
 
+# Writer of tensoboard.
+writer = SummaryWriter() 
+
+open(f'./{_exp_name}_log.txt', 'w').close()
+
 # Initialize trackers, these are not parameters and should not be changed
 stale = 0
 best_acc = 0
+step = 0
 
-for epoch in range(n_epochs):
-
+for epoch in range(n_epochs):    
+    
     # ---------- Training ----------
     # Make sure the model is in train mode before training.
     model.train()
@@ -182,8 +307,10 @@ for epoch in range(n_epochs):
     # These are used to record information in training.
     train_loss = []
     train_accs = []
+    
+    train_pbar = tqdm(train_loader, position=0, leave=True)
 
-    for batch in tqdm(train_loader):
+    for batch in train_pbar:
 
         # A batch consists of image data and corresponding labels.
         imgs, labels = batch
@@ -209,18 +336,23 @@ for epoch in range(n_epochs):
         # Update the parameters with computed gradients.
         optimizer.step()
 
+        step += 1
+
         # Compute the accuracy for current batch.
         acc = (logits.argmax(dim=-1) == labels.to(device)).float().mean()
 
         # Record the loss and accuracy.
         train_loss.append(loss.item())
         train_accs.append(acc)
+
+        # Display current epoch number and loss on tqdm progress bar.
+        train_pbar.set_description(f'Epoch [{epoch+1}/{n_epochs}]')
+        train_pbar.set_postfix({'loss': loss.detach().item()})
         
     train_loss = sum(train_loss) / len(train_loss)
     train_acc = sum(train_accs) / len(train_accs)
-
-    # Print the information.
-    print(f"[ Train | {epoch + 1:03d}/{n_epochs:03d} ] loss = {train_loss:.5f}, acc = {train_acc:.5f}")
+    writer.add_scalar('Loss/train', train_loss, step)
+    writer.add_scalar('Acc/train', train_acc, step)
 
     # ---------- Validation ----------
     # Make sure the model is in eval mode so that some modules like dropout are disabled and work normally.
@@ -230,8 +362,10 @@ for epoch in range(n_epochs):
     valid_loss = []
     valid_accs = []
 
+    valid_pbar = tqdm(valid_loader, position=0, leave=True)
+
     # Iterate the validation set by batches.
-    for batch in tqdm(valid_loader):
+    for batch in valid_pbar:
 
         # A batch consists of image data and corresponding labels.
         imgs, labels = batch
@@ -251,28 +385,33 @@ for epoch in range(n_epochs):
         # Record the loss and accuracy.
         valid_loss.append(loss.item())
         valid_accs.append(acc)
-        #break
+        
+        # Display current epoch number and loss on tqdm progress bar.
+        valid_pbar.set_description(f'Epoch [{epoch+1}/{n_epochs}]')
+        valid_pbar.set_postfix({'loss': loss.detach().item()})
 
     # The average loss and accuracy for entire validation set is the average of the recorded values.
     valid_loss = sum(valid_loss) / len(valid_loss)
     valid_acc = sum(valid_accs) / len(valid_accs)
+    writer.add_scalar('Loss/valid', valid_loss, step)
+    writer.add_scalar('Acc/valid', valid_acc, step)
 
     # Print the information.
-    print(f"[ Valid | {epoch + 1:03d}/{n_epochs:03d} ] loss = {valid_loss:.5f}, acc = {valid_acc:.5f}")
+    print(f"[ Train | {epoch + 1:03d}/{n_epochs:03d} ] loss = {train_loss:.5f}, acc = {train_acc:.5f} || [ Valid | {epoch + 1:03d}/{n_epochs:03d} ] loss = {valid_loss:.5f}, acc = {valid_acc:.5f}")
 
 
     # update logs
     if valid_acc > best_acc:
-        with open(f"./{_exp_name}_log.txt","a"):
-            print(f"[ Valid | {epoch + 1:03d}/{n_epochs:03d} ] loss = {valid_loss:.5f}, acc = {valid_acc:.5f} -> best")
+        with open(f"./{_exp_name}_log.txt","a") as f:
+            f.write(f"[ Train | {epoch + 1:03d}/{n_epochs:03d} ] loss = {train_loss:.5f}, acc = {train_acc:.5f} || [ Valid | {epoch + 1:03d}/{n_epochs:03d} ] loss = {valid_loss:.5f}, acc = {valid_acc:.5f} -> best\n")
     else:
-        with open(f"./{_exp_name}_log.txt","a"):
-            print(f"[ Valid | {epoch + 1:03d}/{n_epochs:03d} ] loss = {valid_loss:.5f}, acc = {valid_acc:.5f}")
+        with open(f"./{_exp_name}_log.txt","a") as f:
+            f.write(f"[ Train | {epoch + 1:03d}/{n_epochs:03d} ] loss = {train_loss:.5f}, acc = {train_acc:.5f} || [ Valid | {epoch + 1:03d}/{n_epochs:03d} ] loss = {valid_loss:.5f}, acc = {valid_acc:.5f}\n")
 
 
     # save models
     if valid_acc > best_acc:
-        print(f"Best model found at epoch {epoch}, saving model")
+        print(f"Best model found at epoch {epoch + 1}, saving model with Valid acc = {valid_acc:.5f}")
         torch.save(model.state_dict(), f"{_exp_name}_best.ckpt") # only save best to prevent output memory exceed error
         best_acc = valid_acc
         stale = 0
@@ -282,17 +421,20 @@ for epoch in range(n_epochs):
             print(f"No improvment {patience} consecutive epochs, early stopping")
             break
 
-test_set = FoodDataset(os.path.join(_dataset_dir,"test"), tfm=test_tfm)
-test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False, num_workers=0, pin_memory=True)
 
 """# Testing and generate prediction CSV"""
 
-model_best = Classifier().to(device)
+test_set = FoodDataset(os.path.join(_dataset_dir,"test"), tfm=test_tfm, no_tfm=no_tfm, p=p_tfm)
+test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False, num_workers=0, pin_memory=True)
+
+model_best = Residual_Network().to(device)
+model_best = nn.DataParallel(model_best)
 model_best.load_state_dict(torch.load(f"{_exp_name}_best.ckpt"))
 model_best.eval()
 prediction = []
 with torch.no_grad():
-    for data,_ in test_loader:
+    test_pbar = tqdm(test_loader, position=0, leave=True)
+    for data,_ in test_pbar:
         test_pred = model_best(data.to(device))
         test_label = np.argmax(test_pred.cpu().data.numpy(), axis=1)
         prediction += test_label.squeeze().tolist()
@@ -303,7 +445,7 @@ def pad4(i):
 df = pd.DataFrame()
 df["Id"] = [pad4(i) for i in range(1,len(test_set)+1)]
 df["Category"] = prediction
-df.to_csv("submission.csv",index = False)
+df.to_csv(f'{_exp_name}.csv',index = False)
 
 """# Q1. Augmentation Implementation
 ## Implement augmentation by finishing train_tfm in the code with image size of your choice. 
@@ -314,11 +456,20 @@ df.to_csv("submission.csv",index = False)
 """
 
 train_tfm = transforms.Compose([
+    transforms.RandomRotation(degrees=30, expand=True),
     # Resize the image into a fixed shape (height = width = 128)
     transforms.Resize((128, 128)),
-    # You need to add some transforms here.
+    # You may add some transforms here.
+    transforms.RandomHorizontalFlip(p=0.5),
+    transforms.ColorJitter(brightness=0.4, contrast=0.2, saturation=0.02, hue=0.02),
+    transforms.RandomPerspective(distortion_scale=0.5, p=0.2),
+    transforms.RandomPosterize(bits=4, p=0.2),
+    transforms.RandomAdjustSharpness(sharpness_factor=0, p=0.2),
+    transforms.RandomAutocontrast(p=0.3),
+    # ToTensor() should be the last one of the transforms.
     transforms.ToTensor(),
 ])
+
 
 """# Q2. Residual Implementation
 ![](https://i.imgur.com/GYsq1Ap.png)
@@ -373,25 +524,25 @@ class Residual_Network(nn.Module):
         x1 = self.cnn_layer1(x)
         
         x1 = self.relu(x1)
-        
+        residual = x1
         x2 = self.cnn_layer2(x1)
-        
+        x2 += residual
         x2 = self.relu(x2)
         
         x3 = self.cnn_layer3(x2)
         
         x3 = self.relu(x3)
-        
+        residual = x3
         x4 = self.cnn_layer4(x3)
-        
+        x4 += residual
         x4 = self.relu(x4)
         
         x5 = self.cnn_layer5(x4)
         
         x5 = self.relu(x5)
-        
+        residual = x5
         x6 = self.cnn_layer6(x5)
-        
+        x6 += residual
         x6 = self.relu(x6)
         
         # The extracted feature map must be flatten before going to fully-connected layers.
