@@ -1,6 +1,18 @@
+*.ckpt
+# HW1
 data/
+# HW2
 libriphone/
 libriphone.zip
-*.ckpt
+# HW3
 food11/
 food11.zip
+/HW3/runs
+*.jpg
+# HW4
+*.tar.gz
+*.partaa
+*.partab
+*.partac
+*.partad
+Dataset/
