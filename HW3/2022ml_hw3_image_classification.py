@@ -79,8 +79,10 @@ Please refer to PyTorch official website for details about different transforms.
 # Normally, We don't need augmentations in testing and validation.
 # All we need here is to resize the PIL image and transform it into Tensor.
 test_tfm = transforms.Compose([
-    transforms.Resize((128, 128)),
+    transforms.Resize(256),
+    transforms.CenterCrop(224),
     transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
 ])
 
 p_tfm = 0.9
@@ -88,8 +90,10 @@ p_tfm = 0.9
 # You may use train_tfm to produce a variety of images and then test using ensemble methods
 train_tfm = transforms.Compose([
     transforms.RandomRotation(degrees=30, expand=True),
+
     # Resize the image into a fixed shape (height = width = 128)
-    transforms.Resize((128, 128)),
+    transforms.Resize(256),
+    transforms.CenterCrop(224),
     # You may add some transforms here.
     
     transforms.RandomHorizontalFlip(p=0.5),
@@ -103,11 +107,14 @@ train_tfm = transforms.Compose([
 
     # ToTensor() should be the last one of the transforms.
     transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
 ])
 
 no_tfm = transforms.Compose([
-    transforms.Resize((128, 128)),
+    transforms.Resize(256),
+    transforms.CenterCrop(224),
     transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
 ])
 
 """## **Datasets**
@@ -264,6 +271,8 @@ class Residual_Network(nn.Module):
         xout = self.fc_layer(xout)
         return xout
 
+resnet18 = models.resnet18(pretrained=False)
+
 """# Training """
 # Construct datasets.
 # The argument "loader" tells how torchvision reads the data.
@@ -279,7 +288,7 @@ for i in range(10):
         save_image(imgs[0], 'transform_'+str(i)+'.jpg')
 
 # Initialize a model, and put it on the device specified.
-model = Residual_Network().to(device)
+model = resnet18.to(device)
 model = nn.DataParallel(model)
 
 # For the classification task, we use cross-entropy as the measurement of performance.
@@ -427,7 +436,7 @@ for epoch in range(n_epochs):
 test_set = FoodDataset(os.path.join(_dataset_dir,"test"), tfm=test_tfm, no_tfm=no_tfm, p=p_tfm)
 test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False, num_workers=0, pin_memory=True)
 
-model_best = Residual_Network().to(device)
+model_best = resnet18.to(device)
 model_best = nn.DataParallel(model_best)
 model_best.load_state_dict(torch.load(f"{_exp_name}_best.ckpt"))
 model_best.eval()
