@@ -21,7 +21,7 @@ Notes: if the links are dead, you can download the data directly from Kaggle and
 
 """# Training"""
 
-_exp_name = "data_aug_w_residual"
+_exp_name = "resnet_50"
 
 # Import necessary packages.
 import numpy as np
@@ -57,7 +57,7 @@ batch_size = 64
 
 # The number of training epochs and patience.
 n_epochs = 200
-patience = 300 # If no improvement in 'patience' epochs, early stop
+patience = 20 # If no improvement in 'patience' epochs, early stop
 
 # set a random seed for reproducibility
 myseed = 6666 
@@ -272,6 +272,8 @@ class Residual_Network(nn.Module):
         return xout
 
 resnet18 = models.resnet18(pretrained=False)
+resnet34 = models.resnet34(pretrained=False)
+resnet50 = models.resnet50(pretrained=False)
 
 """# Training """
 # Construct datasets.
@@ -288,7 +290,7 @@ for i in range(10):
         save_image(imgs[0], 'transform_'+str(i)+'.jpg')
 
 # Initialize a model, and put it on the device specified.
-model = resnet18.to(device)
+model = resnet50.to(device)
 model = nn.DataParallel(model)
 
 # For the classification task, we use cross-entropy as the measurement of performance.
@@ -436,7 +438,7 @@ for epoch in range(n_epochs):
 test_set = FoodDataset(os.path.join(_dataset_dir,"test"), tfm=test_tfm, no_tfm=no_tfm, p=p_tfm)
 test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False, num_workers=0, pin_memory=True)
 
-model_best = resnet18.to(device)
+model_best = resnet50.to(device)
 model_best = nn.DataParallel(model_best)
 model_best.load_state_dict(torch.load(f"{_exp_name}_best.ckpt"))
 model_best.eval()
