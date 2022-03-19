@@ -21,9 +21,10 @@ Notes: if the links are dead, you can download the data directly from Kaggle and
 
 """# Training"""
 
-_exp_name = "resnet_50"
+_exp_name = "resnet34_cv0"
 
 # Import necessary packages.
+import math
 import numpy as np
 import pandas as pd
 import torch
@@ -123,13 +124,40 @@ The data is labelled by the name, so we load images and label while calling '__g
 
 class FoodDataset(Dataset):
 
-    def __init__(self,path,tfm=test_tfm, files=None, no_tfm=no_tfm, p=p_tfm):
+    def __init__(self,mode,paths,tfm=test_tfm, files=None, no_tfm=no_tfm, p=p_tfm, cv=5, val_fold_idx=0):
         super(FoodDataset).__init__()
-        self.path = path
-        self.files = sorted([os.path.join(path,x) for x in os.listdir(path) if x.endswith(".jpg")])
+        self.paths = [os.path.join(_dataset_dir, path) for path in paths]
+        # print(self.paths)
+        self.files = sorted([os.path.join(path,x) for path in self.paths for x in os.listdir(path) if x.endswith(".jpg")])
         if files != None:
             self.files = files
-        print(f"One {path} sample",self.files[0])
+        print(f'total file size = {len(self.files)}')
+        
+        # train valid split
+        if mode != 'test':
+            folds = []
+            random.seed(myseed)
+            random.shuffle(self.files)
+            len_files = len(self.files)
+            for i in range(cv):
+                fold = self.files[math.ceil(len_files * i /cv) : math.ceil(len_files * (i + 1) /cv)]
+                folds.append(fold)
+            if mode == 'train':
+                del folds[val_fold_idx]
+                self.files = np.array(folds).flatten().tolist()
+                print(f'train set size = {len(self.files)}')
+            elif mode == 'valid':
+                self.files = folds[val_fold_idx]
+                print(f'valid set size = {len(self.files)}')
+
+        # print one sample path 
+        if mode == 'test':
+            print(f"One {paths[0]} sample",self.files[0])
+        elif mode == 'train':
+            print(f"One {paths[0]} sample",self.files[0])
+        elif mode == 'valid':
+            print(f"One {paths[1]} sample",self.files[0])
+
         self.transform = tfm
         self.no_transform = no_tfm
         self.p = p
@@ -278,19 +306,19 @@ resnet50 = models.resnet50(pretrained=False)
 """# Training """
 # Construct datasets.
 # The argument "loader" tells how torchvision reads the data.
-train_set = FoodDataset(os.path.join(_dataset_dir,"training"), tfm=train_tfm, no_tfm=no_tfm, p=p_tfm)
+train_set = FoodDataset('train', ["training", "validation"], tfm=train_tfm, no_tfm=no_tfm, p=p_tfm)
 train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=0, pin_memory=True)
-valid_set = FoodDataset(os.path.join(_dataset_dir,"validation"), tfm=test_tfm, no_tfm=no_tfm, p=p_tfm)
+valid_set = FoodDataset('valid', ["training", "validation"], tfm=test_tfm, no_tfm=no_tfm, p=p_tfm)
 valid_loader = DataLoader(valid_set, batch_size=batch_size, shuffle=True, num_workers=0, pin_memory=True)
 
-aug_set = FoodDataset(os.path.join(_dataset_dir,"aug"), tfm=train_tfm, no_tfm=no_tfm, p=p_tfm)
-aug_loader = DataLoader(aug_set, batch_size=1, shuffle=False, num_workers=0, pin_memory=True)
-for i in range(10):
-    for imgs, labels in aug_loader:
-        save_image(imgs[0], 'transform_'+str(i)+'.jpg')
+# aug_set = FoodDataset('train', ["aug"], tfm=train_tfm, no_tfm=no_tfm, p=p_tfm)
+# aug_loader = DataLoader(aug_set, batch_size=1, shuffle=False, num_workers=0, pin_memory=True)
+# for i in range(10):
+#     for imgs, labels in aug_loader:
+#         save_image(imgs[0], 'transform_'+str(i)+'.jpg')
 
 # Initialize a model, and put it on the device specified.
-model = resnet50.to(device)
+model = resnet34.to(device)
 model = nn.DataParallel(model)
 
 # For the classification task, we use cross-entropy as the measurement of performance.
@@ -435,28 +463,28 @@ for epoch in range(n_epochs):
 
 """# Testing and generate prediction CSV"""
 
-test_set = FoodDataset(os.path.join(_dataset_dir,"test"), tfm=test_tfm, no_tfm=no_tfm, p=p_tfm)
-test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False, num_workers=0, pin_memory=True)
+# test_set = FoodDataset('test', os.path.join(_dataset_dir,"test"), tfm=test_tfm, no_tfm=no_tfm, p=p_tfm)
+# test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False, num_workers=0, pin_memory=True)
 
-model_best = resnet50.to(device)
-model_best = nn.DataParallel(model_best)
-model_best.load_state_dict(torch.load(f"{_exp_name}_best.ckpt"))
-model_best.eval()
-prediction = []
-with torch.no_grad():
-    test_pbar = tqdm(test_loader, position=0, leave=True)
-    for data,_ in test_pbar:
-        test_pred = model_best(data.to(device))
-        test_label = np.argmax(test_pred.cpu().data.numpy(), axis=1)
-        prediction += test_label.squeeze().tolist()
+# model_best = resnet34.to(device)
+# model_best = nn.DataParallel(model_best)
+# model_best.load_state_dict(torch.load(f"{_exp_name}_best.ckpt"))
+# model_best.eval()
+# prediction = []
+# with torch.no_grad():
+#     test_pbar = tqdm(test_loader, position=0, leave=True)
+#     for data,_ in test_pbar:
+#         test_pred = model_best(data.to(device))
+#         test_label = np.argmax(test_pred.cpu().data.numpy(), axis=1)
+#         prediction += test_label.squeeze().tolist()
 
-#create test csv
-def pad4(i):
-    return "0"*(4-len(str(i)))+str(i)
-df = pd.DataFrame()
-df["Id"] = [pad4(i) for i in range(1,len(test_set)+1)]
-df["Category"] = prediction
-df.to_csv(f'{_exp_name}.csv',index = False)
+# #create test csv
+# def pad4(i):
+#     return "0"*(4-len(str(i)))+str(i)
+# df = pd.DataFrame()
+# df["Id"] = [pad4(i) for i in range(1,len(test_set)+1)]
+# df["Category"] = prediction
+# df.to_csv(f'{_exp_name}.csv',index = False)
 
 """# Q1. Augmentation Implementation
 ## Implement augmentation by finishing train_tfm in the code with image size of your choice. 
