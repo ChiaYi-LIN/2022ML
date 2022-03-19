@@ -86,7 +86,6 @@ no_tfm = transforms.Compose([
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
 ])
 
-
 class FoodDataset(Dataset):
 
     def __init__(self,path,tfm=test_tfm, files=None, no_tfm=no_tfm, p=p_tfm):
@@ -125,7 +124,7 @@ resnet50 = models.resnet50(pretrained=False).to(device)
 
 test_set = FoodDataset(os.path.join(_dataset_dir,"test"), tfm=test_tfm, no_tfm=no_tfm, p=p_tfm)
 test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False, num_workers=0, pin_memory=True)
-test_transform_set = FoodDataset(os.path.join(_dataset_dir,"test"), tfm=train_tfm, no_tfm=no_tfm, p=p_tfm)
+test_transform_set = FoodDataset(os.path.join(_dataset_dir,"test"), tfm=train_tfm, no_tfm=no_tfm, p=1)
 test_transform_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False, num_workers=0, pin_memory=True)
 
 resnet18 = models.resnet18(pretrained=False).to(device)
@@ -147,19 +146,6 @@ resnet50.eval()
 best_models = [resnet18, resnet34, resnet50]
 weights = [1, 1, 1]
 
-prediction = []
-with torch.no_grad():
-    test_pbar = tqdm(test_loader, position=0, leave=True)
-    for data,_ in test_pbar:
-        test_pred = np.zeros((data.shape[0], 1000))
-        for i in range(len(best_models)):
-            model_best = best_models[i]
-            this_model_pred = model_best(data.to(device)).cpu().data.numpy()
-            # print(this_model_pred.shape)
-            test_pred = np.add(test_pred, this_model_pred * weights[i])
-        test_label = np.argmax(test_pred, axis=1)
-        prediction += test_label.squeeze().tolist()
-
 # prediction = []
 # with torch.no_grad():
 #     test_pbar = tqdm(test_loader, position=0, leave=True)
@@ -170,25 +156,38 @@ with torch.no_grad():
 #             this_model_pred = model_best(data.to(device)).cpu().data.numpy()
 #             # print(this_model_pred.shape)
 #             test_pred = np.add(test_pred, this_model_pred * weights[i])
-#         prediction += test_pred.tolist()
+#         test_label = np.argmax(test_pred, axis=1)
+#         prediction += test_label.squeeze().tolist()
 
-# trans_prediction = np.zeros((len(test_transform_set), 1000))
-# with torch.no_grad():
-#     for epoch in range(n_epochs):
-#         test_pbar = tqdm(test_transform_loader, position=0, leave=True)
-#         pred_one_epoch = []
-#         for data,_ in test_pbar:
-#             test_pred = np.zeros((data.shape[0], 1000))
-#             for i in range(len(best_models)):
-#                 model_best = best_models[i]
-#                 this_model_pred = model_best(data.to(device)).cpu().data.numpy()
-#                 # print(this_model_pred.shape)
-#                 test_pred = np.add(test_pred, this_model_pred * weights[i])
-#             pred_one_epoch += test_pred.tolist()
-#         trans_prediction = np.add(trans_prediction, np.array(pred_one_epoch))
+prediction = []
+with torch.no_grad():
+    test_pbar = tqdm(test_loader, position=0, leave=True)
+    for data,_ in test_pbar:
+        test_pred = np.zeros((data.shape[0], 1000))
+        for i in range(len(best_models)):
+            model_best = best_models[i]
+            this_model_pred = model_best(data.to(device)).cpu().data.numpy()
+            # print(this_model_pred.shape)
+            test_pred = np.add(test_pred, this_model_pred * weights[i])
+        prediction += test_pred.tolist()
 
-# test_results = np.add(np.array(prediction) * n_epochs, trans_prediction)
-# prediction = np.argmax(test_results, axis=1)
+trans_prediction = np.zeros((len(test_transform_set), 1000))
+with torch.no_grad():
+    for epoch in range(n_epochs):
+        test_pbar = tqdm(test_transform_loader, position=0, leave=True)
+        pred_one_epoch = []
+        for data,_ in test_pbar:
+            test_pred = np.zeros((data.shape[0], 1000))
+            for i in range(len(best_models)):
+                model_best = best_models[i]
+                this_model_pred = model_best(data.to(device)).cpu().data.numpy()
+                # print(this_model_pred.shape)
+                test_pred = np.add(test_pred, this_model_pred * weights[i])
+            pred_one_epoch += test_pred.tolist()
+        trans_prediction = np.add(trans_prediction, np.array(pred_one_epoch))
+
+test_results = np.add(np.array(prediction) * n_epochs, trans_prediction)
+prediction = np.argmax(test_results, axis=1)
 
 #create test csv
 def pad4(i):
