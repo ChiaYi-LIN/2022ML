@@ -21,10 +21,11 @@ Notes: if the links are dead, you can download the data directly from Kaggle and
 
 """# Training"""
 
-_exp_name = "resnet34_cv0"
+_exp_name = "resnet34_cv4"
 
 # Import necessary packages.
 import math
+from datetime import datetime
 import numpy as np
 import pandas as pd
 import torch
@@ -124,7 +125,7 @@ The data is labelled by the name, so we load images and label while calling '__g
 
 class FoodDataset(Dataset):
 
-    def __init__(self,mode,paths,tfm=test_tfm, files=None, no_tfm=no_tfm, p=p_tfm, cv=5, val_fold_idx=0):
+    def __init__(self,mode,paths,tfm=test_tfm, files=None, no_tfm=no_tfm, p=p_tfm, cv=5, val_fold_idx=4):
         super(FoodDataset).__init__()
         self.paths = [os.path.join(_dataset_dir, path) for path in paths]
         # print(self.paths)
@@ -135,19 +136,14 @@ class FoodDataset(Dataset):
         
         # train valid split
         if mode != 'test':
-            folds = []
             random.seed(myseed)
             random.shuffle(self.files)
             len_files = len(self.files)
-            for i in range(cv):
-                fold = self.files[math.ceil(len_files * i /cv) : math.ceil(len_files * (i + 1) /cv)]
-                folds.append(fold)
             if mode == 'train':
-                del folds[val_fold_idx]
-                self.files = np.array(folds).flatten().tolist()
+                del self.files[math.ceil(len_files * val_fold_idx / cv) : math.ceil(len_files * (val_fold_idx + 1) /cv)]
                 print(f'train set size = {len(self.files)}')
             elif mode == 'valid':
-                self.files = folds[val_fold_idx]
+                self.files = self.files[math.ceil(len_files * val_fold_idx / cv) : math.ceil(len_files * (val_fold_idx + 1) /cv)]
                 print(f'valid set size = {len(self.files)}')
 
         # print one sample path 
@@ -330,7 +326,8 @@ optimizer = torch.optim.Adam(model.parameters(), lr=0.0003, weight_decay=1e-5)
 # Writer of tensoboard.
 writer = SummaryWriter() 
 
-open(f'./{_exp_name}_log.txt', 'w').close()
+with open(f"./{_exp_name}_log.txt","w") as f:
+    f.write(f'training start: {datetime.now()}') 
 
 # Initialize trackers, these are not parameters and should not be changed
 stale = 0
@@ -460,6 +457,8 @@ for epoch in range(n_epochs):
             print(f"No improvment {patience} consecutive epochs, early stopping")
             break
 
+with open(f"./{_exp_name}_log.txt","a") as f:
+    f.write(f'training finish: {datetime.now()}') 
 
 """# Testing and generate prediction CSV"""
 
