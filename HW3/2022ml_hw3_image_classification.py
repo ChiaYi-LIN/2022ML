@@ -21,7 +21,7 @@ Notes: if the links are dead, you can download the data directly from Kaggle and
 
 """# Training"""
 
-_exp_name = "resnet34_cv4"
+_exp_name = "effnet_cv0"
 
 # Import necessary packages.
 import math
@@ -58,7 +58,7 @@ _dataset_dir = "./food11"
 batch_size = 64
 
 # The number of training epochs and patience.
-n_epochs = 200
+n_epochs = 100
 patience = 20 # If no improvement in 'patience' epochs, early stop
 
 # set a random seed for reproducibility
@@ -125,7 +125,7 @@ The data is labelled by the name, so we load images and label while calling '__g
 
 class FoodDataset(Dataset):
 
-    def __init__(self,mode,paths,tfm=test_tfm, files=None, no_tfm=no_tfm, p=p_tfm, cv=5, val_fold_idx=4):
+    def __init__(self,mode,paths,tfm=test_tfm, files=None, no_tfm=no_tfm, p=p_tfm, cv=5, val_fold_idx=0):
         super(FoodDataset).__init__()
         self.paths = [os.path.join(_dataset_dir, path) for path in paths]
         # print(self.paths)
@@ -298,6 +298,7 @@ class Residual_Network(nn.Module):
 resnet18 = models.resnet18(pretrained=False)
 resnet34 = models.resnet34(pretrained=False)
 resnet50 = models.resnet50(pretrained=False)
+effnet_b4 = models.efficientnet_b4(pretrained=False)
 
 """# Training """
 # Construct datasets.
@@ -314,7 +315,7 @@ valid_loader = DataLoader(valid_set, batch_size=batch_size, shuffle=True, num_wo
 #         save_image(imgs[0], 'transform_'+str(i)+'.jpg')
 
 # Initialize a model, and put it on the device specified.
-model = resnet34.to(device)
+model = effnet_b4.to(device)
 model = nn.DataParallel(model)
 
 # For the classification task, we use cross-entropy as the measurement of performance.
@@ -327,7 +328,7 @@ optimizer = torch.optim.Adam(model.parameters(), lr=0.0003, weight_decay=1e-5)
 writer = SummaryWriter() 
 
 with open(f"./{_exp_name}_log.txt","w") as f:
-    f.write(f'training start: {datetime.now()}') 
+    f.write(f'training start: {datetime.now()}\n') 
 
 # Initialize trackers, these are not parameters and should not be changed
 stale = 0
@@ -458,7 +459,7 @@ for epoch in range(n_epochs):
             break
 
 with open(f"./{_exp_name}_log.txt","a") as f:
-    f.write(f'training finish: {datetime.now()}') 
+    f.write(f'training finish: {datetime.now()}\n') 
 
 """# Testing and generate prediction CSV"""
 
