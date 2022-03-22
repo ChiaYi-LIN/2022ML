@@ -1,4 +1,4 @@
-_exp_name = 'resnet_18_34_50_ensemble'
+_exp_name = 'eff_TTA_1v1'
 
 # Import necessary packages.
 import numpy as np
@@ -116,36 +116,79 @@ class FoodDataset(Dataset):
             label = -1 # test has no label
         return im,label
 
-resnet18 = models.resnet18(pretrained=False).to(device)
-resnet34 = models.resnet34(pretrained=False).to(device)
-resnet50 = models.resnet50(pretrained=False).to(device)
 
 """# Testing and generate prediction CSV"""
 
 test_set = FoodDataset(os.path.join(_dataset_dir,"test"), tfm=test_tfm, no_tfm=no_tfm, p=p_tfm)
 test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False, num_workers=0, pin_memory=True)
-test_transform_set = FoodDataset(os.path.join(_dataset_dir,"test"), tfm=train_tfm, no_tfm=no_tfm, p=1)
-test_transform_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False, num_workers=0, pin_memory=True)
+test_transform_set = FoodDataset(os.path.join(_dataset_dir,"test"), tfm=train_tfm, no_tfm=no_tfm, p=p_tfm)
+test_transform_loader = DataLoader(test_transform_set, batch_size=batch_size, shuffle=False, num_workers=0, pin_memory=True)
 
 resnet18 = models.resnet18(pretrained=False).to(device)
-resnet34 = models.resnet34(pretrained=False).to(device)
-resnet50 = models.resnet50(pretrained=False).to(device)
+# resnet34 = models.resnet34(pretrained=False).to(device)
+# resnet50 = models.resnet50(pretrained=False).to(device)
 
 resnet18 = nn.DataParallel(resnet18)
-resnet34 = nn.DataParallel(resnet34)
-resnet50 = nn.DataParallel(resnet50)
+# resnet34 = nn.DataParallel(resnet34)
+# resnet50 = nn.DataParallel(resnet50)
 
 resnet18.load_state_dict(torch.load(f"resnet_18_best.ckpt"))
-resnet34.load_state_dict(torch.load(f"resnet_34_best.ckpt"))
-resnet50.load_state_dict(torch.load(f"resnet_50_best.ckpt"))
+# resnet34.load_state_dict(torch.load(f"resnet_34_best.ckpt"))
+# resnet50.load_state_dict(torch.load(f"resnet_50_best.ckpt"))
 
 resnet18.eval()
-resnet34.eval()
-resnet50.eval()
+# resnet34.eval()
+# resnet50.eval()
 
-best_models = [resnet18, resnet34, resnet50]
-weights = [1, 1, 1]
+# cv_0 = models.resnet34(pretrained=False).to(device)
+# cv_1 = models.resnet34(pretrained=False).to(device)
+# cv_2 = models.resnet34(pretrained=False).to(device)
+# cv_3 = models.resnet34(pretrained=False).to(device)
+# cv_4 = models.resnet34(pretrained=False).to(device)
 
+# cv_0 = nn.DataParallel(cv_0)
+# cv_1 = nn.DataParallel(cv_1)
+# cv_2 = nn.DataParallel(cv_2)
+# cv_3 = nn.DataParallel(cv_3)
+# cv_4 = nn.DataParallel(cv_4)
+
+# cv_0.load_state_dict(torch.load(f"resnet34_cv0_best.ckpt"))
+# cv_1.load_state_dict(torch.load(f"resnet34_cv1_best.ckpt"))
+# cv_2.load_state_dict(torch.load(f"resnet34_cv2_best.ckpt"))
+# cv_3.load_state_dict(torch.load(f"resnet34_cv3_best.ckpt"))
+# cv_4.load_state_dict(torch.load(f"resnet34_cv4_best.ckpt"))
+
+# cv_0.eval()
+# cv_1.eval()
+# cv_2.eval()
+# cv_3.eval()
+# cv_4.eval()
+
+cv_0 = models.efficientnet_b4(pretrained=False).to(device)
+cv_1 = models.efficientnet_b4(pretrained=False).to(device)
+cv_2 = models.efficientnet_b4(pretrained=False).to(device)
+cv_3 = models.efficientnet_b4(pretrained=False).to(device)
+
+cv_0 = nn.DataParallel(cv_0)
+cv_1 = nn.DataParallel(cv_1)
+cv_2 = nn.DataParallel(cv_2)
+cv_3 = nn.DataParallel(cv_3)
+
+cv_0.load_state_dict(torch.load(f"effnet_cv0_best.ckpt"))
+cv_1.load_state_dict(torch.load(f"effnet_cv1_best.ckpt"))
+cv_2.load_state_dict(torch.load(f"effnet_cv2_best.ckpt"))
+cv_3.load_state_dict(torch.load(f"effnet_cv3_best.ckpt"))
+
+cv_0.eval()
+cv_1.eval()
+cv_2.eval()
+cv_3.eval()
+
+best_models = [cv_0, cv_1, cv_2, cv_3, resnet18]
+
+#
+# Original Testing
+#
 # prediction = []
 # with torch.no_grad():
 #     test_pbar = tqdm(test_loader, position=0, leave=True)
@@ -155,10 +198,13 @@ weights = [1, 1, 1]
 #             model_best = best_models[i]
 #             this_model_pred = model_best(data.to(device)).cpu().data.numpy()
 #             # print(this_model_pred.shape)
-#             test_pred = np.add(test_pred, this_model_pred * weights[i])
+#             test_pred = np.add(test_pred, this_model_pred)
 #         test_label = np.argmax(test_pred, axis=1)
 #         prediction += test_label.squeeze().tolist()
 
+#
+# Test Time Augmentation
+#
 prediction = []
 with torch.no_grad():
     test_pbar = tqdm(test_loader, position=0, leave=True)
@@ -168,7 +214,7 @@ with torch.no_grad():
             model_best = best_models[i]
             this_model_pred = model_best(data.to(device)).cpu().data.numpy()
             # print(this_model_pred.shape)
-            test_pred = np.add(test_pred, this_model_pred * weights[i])
+            test_pred = np.add(test_pred, this_model_pred)
         prediction += test_pred.tolist()
 
 trans_prediction = np.zeros((len(test_transform_set), 1000))
@@ -182,7 +228,7 @@ with torch.no_grad():
                 model_best = best_models[i]
                 this_model_pred = model_best(data.to(device)).cpu().data.numpy()
                 # print(this_model_pred.shape)
-                test_pred = np.add(test_pred, this_model_pred * weights[i])
+                test_pred = np.add(test_pred, this_model_pred)
             pred_one_epoch += test_pred.tolist()
         trans_prediction = np.add(trans_prediction, np.array(pred_one_epoch))
 
