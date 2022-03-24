@@ -119,6 +119,31 @@ no_tfm = transforms.Compose([
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
 ])
 
+'''
+# For Classier & Residual_Network
+# Normally, We don't need augmentations in testing and validation.
+# All we need here is to resize the PIL image and transform it into Tensor.
+test_tfm = transforms.Compose([
+    transforms.Resize((128, 128)),
+    transforms.ToTensor(),
+])
+
+# However, it is also possible to use augmentation in the testing phase.
+# You may use train_tfm to produce a variety of images and then test using ensemble methods
+train_tfm = transforms.Compose([
+    # Resize the image into a fixed shape (height = width = 128)
+    transforms.Resize((128, 128)),
+    # You may add some transforms here.
+    # ToTensor() should be the last one of the transforms.
+    transforms.ToTensor(),
+])
+
+no_tfm = transforms.Compose([
+    transforms.Resize((128, 128)),
+    transforms.ToTensor(),
+])
+'''
+
 """## **Datasets**
 The data is labelled by the name, so we load images and label while calling '__getitem__'
 """
@@ -267,25 +292,25 @@ class Residual_Network(nn.Module):
         x1 = self.cnn_layer1(x)
         
         x1 = self.relu(x1)
-        residual = x1
+        
         x2 = self.cnn_layer2(x1)
-        x2 += residual
+        x2 += x1
         x2 = self.relu(x2)
         
         x3 = self.cnn_layer3(x2)
         
         x3 = self.relu(x3)
-        residual = x3
+        
         x4 = self.cnn_layer4(x3)
-        x4 += residual
+        x4 += x3
         x4 = self.relu(x4)
         
         x5 = self.cnn_layer5(x4)
         
         x5 = self.relu(x5)
-        residual = x5
+        
         x6 = self.cnn_layer6(x5)
-        x6 += residual
+        x6 += x5
         x6 = self.relu(x6)
         
         # The extracted feature map must be flatten before going to fully-connected layers.
@@ -563,25 +588,25 @@ class Residual_Network(nn.Module):
         x1 = self.cnn_layer1(x)
         
         x1 = self.relu(x1)
-        residual = x1
+        
         x2 = self.cnn_layer2(x1)
-        x2 += residual
+        x2 += x1
         x2 = self.relu(x2)
         
         x3 = self.cnn_layer3(x2)
         
         x3 = self.relu(x3)
-        residual = x3
+        
         x4 = self.cnn_layer4(x3)
-        x4 += residual
+        x4 += x3
         x4 = self.relu(x4)
         
         x5 = self.cnn_layer5(x4)
         
         x5 = self.relu(x5)
-        residual = x5
+        
         x6 = self.cnn_layer6(x5)
-        x6 += residual
+        x6 += x5
         x6 = self.relu(x6)
         
         # The extracted feature map must be flatten before going to fully-connected layers.
