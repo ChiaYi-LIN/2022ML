@@ -34,7 +34,7 @@ Original file is located at
 # unzip the file
 # !tar zxvf Dataset.tar.gz
 
-model_name = "attpool_1"
+model_name = "AMSoftmax"
 
 """## Fix Random Seed"""
 
@@ -244,14 +244,17 @@ class Classifier(nn.Module):
 		)
 
 		# Project the the dimension of features from d_model into speaker nums.
-		self.pred_layer = nn.Sequential(
+		self.ffn = nn.Sequential(
 			nn.Linear(d_model, d_model),
 			nn.ReLU(),
 			# nn.Dropout(p=dropout),
-			nn.Linear(d_model, n_spks),
 		)
 
-	def forward(self, mels, lengths):
+		self.s = 30.0
+		self.m = 0.4
+		self.pred = nn.Linear(d_model, n_spks, bias=False)
+
+	def forward(self, mels, labels, lengths):
 		"""
 		args:
 			mels: (batch size, length, 40)
@@ -261,6 +264,10 @@ class Classifier(nn.Module):
 
 		# out: (batch size, length, d_model)
 		out = self.prenet(mels)
+
+		####
+		# Use Transformer Encoder
+		####
 		# out: (length, batch size, d_model)
 		# out = out.permute(1, 0, 2)
 
@@ -271,30 +278,52 @@ class Classifier(nn.Module):
 		# out: (batch size, length, d_model)
 		# out = out.transpose(0, 1)
 
+		####
 		# Use Conformer
+		####
 		out, _ = self.conformer(out, lengths)
 		# print(f'out.shape = {out.shape}')
 
-		#
+		####
 		# mean pooling
-		#
+		####
 		# stats = out.mean(dim=1)
 
 		# out: (batch, n_spks)
 		# out = self.pred_layer(stats)
 
-		#
+		####
 		# self attention pooling
-		#
+		####
 		pool = self.att_pool(out)
 		pool = torch.transpose(pool, 1, 2)
 		# print(f'pool.shape = {pool.shape}')
-
 		rep = torch.matmul(pool, out)
 		# print(f'rep.shape = {rep.shape}')
+		rep = torch.squeeze(rep, dim=1)
+		
+		x = self.ffn(rep)
 
-		out = self.pred_layer(torch.squeeze(rep, dim=1))
+		out = self.pred(x)
 
+		#
+		# AMSoftmax Loss
+		#
+		if labels is not None:
+			for W in self.pred.parameters():
+				W = F.normalize(W, dim=1)
+			
+			x = F.normalize(x, dim=1)
+
+			wf = self.pred(x)
+			numerator = self.s * (torch.diagonal(wf.transpose(0, 1)[labels]) - self.m)
+			excl = torch.cat([torch.cat((wf[i, :y], wf[i, y+1:])).unsqueeze(0) for i, y in enumerate(labels)], dim=0)
+			denominator = torch.log(torch.exp(numerator) + torch.sum(torch.exp(self.s * excl), dim=1))
+			L = numerator - denominator
+			loss = -torch.mean(L)
+
+			return out, loss
+		
 		return out
 
 """# Learning rate schedule
@@ -367,11 +396,12 @@ def model_fn(batch, model, criterion, device):
 	mels, labels, lengths = batch
 	mels = mels.to(device)
 	labels = labels.to(device)
-	lengths = lengths.to(device)
+	lengths = torch.LongTensor([128 for _ in range(len(mels))]).to(device)
+	# lengths = lengths.to(device)
 
-	outs = model(mels, lengths)
+	outs, loss = model(mels, labels, lengths)
 
-	loss = criterion(outs, labels)
+	# loss = criterion(outs, labels)
 
 	# Get the speaker id with highest probability.
 	preds = outs.argmax(1)
@@ -633,7 +663,7 @@ def main(
 			mels = mels.to(device)
 			# print(mels.shape)
 			lengths = torch.LongTensor([mels.shape[1]]).to(device)
-			outs = model(mels, lengths)
+			outs = model(mels, None, lengths)
 			preds = outs.argmax(1).cpu().numpy()
 			for feat_path, pred in zip(feat_paths, preds):
 				results.append([feat_path, mapping["id2speaker"][str(pred)]])
