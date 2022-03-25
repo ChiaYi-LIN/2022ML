@@ -1,0 +1,37 @@
+training start: 2022-03-25 20:07:54.040796
+[ 002000/070000 ] Train loss = 5.13998, Train acc = 0.05797 || Valid loss = 4.16013,  Valid acc = 0.13312 -> best
+[ 004000/070000 ] Train loss = 3.59885, Train acc = 0.22106 || Valid loss = 3.24443,  Valid acc = 0.28663 -> best
+[ 006000/070000 ] Train loss = 2.88588, Train acc = 0.34587 || Valid loss = 2.78444,  Valid acc = 0.37200 -> best
+[ 008000/070000 ] Train loss = 2.45405, Train acc = 0.43120 || Valid loss = 2.42464,  Valid acc = 0.44174 -> best
+[ 010000/070000 ] Train loss = 2.11126, Train acc = 0.50183 || Valid loss = 2.23690,  Valid acc = 0.48711 -> best
+[ 012000/070000 ] Train loss = 1.87120, Train acc = 0.55002 || Valid loss = 2.09635,  Valid acc = 0.51201 -> best
+[ 014000/070000 ] Train loss = 1.72572, Train acc = 0.57917 || Valid loss = 1.87988,  Valid acc = 0.55270 -> best
+[ 016000/070000 ] Train loss = 1.56806, Train acc = 0.61325 || Valid loss = 1.78356,  Valid acc = 0.57971 -> best
+[ 018000/070000 ] Train loss = 1.44824, Train acc = 0.64108 || Valid loss = 1.70024,  Valid acc = 0.60293 -> best
+[ 020000/070000 ] Train loss = 1.35767, Train acc = 0.65961 || Valid loss = 1.57894,  Valid acc = 0.62597 -> best
+[ 022000/070000 ] Train loss = 1.24222, Train acc = 0.68845 || Valid loss = 1.54629,  Valid acc = 0.63648 -> best
+[ 024000/070000 ] Train loss = 1.18052, Train acc = 0.70289 || Valid loss = 1.49385,  Valid acc = 0.64327 -> best
+[ 026000/070000 ] Train loss = 1.09113, Train acc = 0.72209 || Valid loss = 1.40849,  Valid acc = 0.66596 -> best
+[ 028000/070000 ] Train loss = 1.02441, Train acc = 0.74041 || Valid loss = 1.36277,  Valid acc = 0.67240 -> best
+[ 030000/070000 ] Train loss = 0.96198, Train acc = 0.75278 || Valid loss = 1.30164,  Valid acc = 0.69509 -> best
+[ 032000/070000 ] Train loss = 0.91218, Train acc = 0.76506 || Valid loss = 1.24100,  Valid acc = 0.70295 -> best
+[ 034000/070000 ] Train loss = 0.85305, Train acc = 0.77897 || Valid loss = 1.25203,  Valid acc = 0.70109
+[ 036000/070000 ] Train loss = 0.79511, Train acc = 0.79238 || Valid loss = 1.19209,  Valid acc = 0.71619 -> best
+[ 038000/070000 ] Train loss = 0.74705, Train acc = 0.80417 || Valid loss = 1.15308,  Valid acc = 0.72696 -> best
+[ 040000/070000 ] Train loss = 0.70882, Train acc = 0.81481 || Valid loss = 1.12325,  Valid acc = 0.73385 -> best
+[ 042000/070000 ] Train loss = 0.65915, Train acc = 0.82719 || Valid loss = 1.09831,  Valid acc = 0.74073 -> best
+[ 044000/070000 ] Train loss = 0.62724, Train acc = 0.83527 || Valid loss = 1.07412,  Valid acc = 0.74594 -> best
+[ 046000/070000 ] Train loss = 0.58238, Train acc = 0.84569 || Valid loss = 1.03850,  Valid acc = 0.75406 -> best
+[ 048000/070000 ] Train loss = 0.54837, Train acc = 0.85497 || Valid loss = 1.03705,  Valid acc = 0.75900 -> best
+[ 050000/070000 ] Train loss = 0.52316, Train acc = 0.86248 || Valid loss = 1.00357,  Valid acc = 0.76774 -> best
+[ 052000/070000 ] Train loss = 0.48446, Train acc = 0.87206 || Valid loss = 0.99340,  Valid acc = 0.77092 -> best
+[ 054000/070000 ] Train loss = 0.46791, Train acc = 0.87634 || Valid loss = 0.98368,  Valid acc = 0.77225 -> best
+[ 056000/070000 ] Train loss = 0.43377, Train acc = 0.88509 || Valid loss = 0.96888,  Valid acc = 0.77551 -> best
+[ 058000/070000 ] Train loss = 0.43247, Train acc = 0.88656 || Valid loss = 0.93119,  Valid acc = 0.78452 -> best
+[ 060000/070000 ] Train loss = 0.40141, Train acc = 0.89444 || Valid loss = 0.94507,  Valid acc = 0.78337
+[ 062000/070000 ] Train loss = 0.39123, Train acc = 0.89759 || Valid loss = 0.92149,  Valid acc = 0.78478 -> best
+[ 064000/070000 ] Train loss = 0.37935, Train acc = 0.90100 || Valid loss = 0.92881,  Valid acc = 0.78787 -> best
+[ 066000/070000 ] Train loss = 0.37386, Train acc = 0.90269 || Valid loss = 0.91643,  Valid acc = 0.79123 -> best
+[ 068000/070000 ] Train loss = 0.36717, Train acc = 0.90503 || Valid loss = 0.90401,  Valid acc = 0.78796
+[ 070000/070000 ] Train loss = 0.36606, Train acc = 0.90500 || Valid loss = 0.90412,  Valid acc = 0.78875
+training finish: 2022-03-25 21:19:31.105665

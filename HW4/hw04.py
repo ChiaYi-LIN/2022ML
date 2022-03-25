@@ -34,7 +34,7 @@ Original file is located at
 # unzip the file
 # !tar zxvf Dataset.tar.gz
 
-model_name = "att_pool"
+model_name = "attpool_1"
 
 """## Fix Random Seed"""
 
@@ -52,7 +52,7 @@ def set_seed(seed):
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True
 
-set_seed(1121326)
+set_seed(1)
 
 """# Data
 
@@ -162,7 +162,7 @@ def get_dataloader(data_dir, batch_size, n_workers):
 	dataset = myDataset(data_dir)
 	speaker_num = dataset.get_speaker_number()
 	# Split dataset into training dataset and validation dataset
-	trainlen = int(0.9 * len(dataset))
+	trainlen = int(0.8 * len(dataset))
 	lengths = [trainlen, len(dataset) - trainlen]
 	trainset, validset = random_split(dataset, lengths)
 
@@ -232,9 +232,9 @@ class Classifier(nn.Module):
 		self.conformer = models.Conformer(
 			input_dim=d_model,
 			num_heads=1,
-			ffn_dim=128,
-			num_layers=4,
-			depthwise_conv_kernel_size=17,
+			ffn_dim=64,
+			num_layers=5,
+			depthwise_conv_kernel_size=5,
 			# dropout=dropout
 		)
 
@@ -580,7 +580,7 @@ def inference_collate_batch(batch):
 import json
 import csv
 from pathlib import Path
-from tqdm.notebook import tqdm
+from tqdm import tqdm
 
 import torch
 from torch.utils.data import DataLoader
