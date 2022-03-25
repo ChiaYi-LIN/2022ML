@@ -34,6 +34,8 @@ Original file is located at
 # unzip the file
 # !tar zxvf Dataset.tar.gz
 
+model_name = "att_pool"
+
 """## Fix Random Seed"""
 
 import numpy as np
@@ -118,7 +120,7 @@ class myDataset(Dataset):
 		feat_path, speaker = self.data[index]
 		# Load preprocessed mel-spectrogram.
 		mel = torch.load(os.path.join(self.data_dir, feat_path))
-
+		length = min(len(mel), self.segment_len)
 		# Segmemt mel-spectrogram into "segment_len" frames.
 		if len(mel) > self.segment_len:
 			# Randomly get the starting point of the segment.
@@ -129,7 +131,8 @@ class myDataset(Dataset):
 			mel = torch.FloatTensor(mel)
 		# Turn the speaker id into long for computing loss later.
 		speaker = torch.FloatTensor([speaker]).long()
-		return mel, speaker
+		length = torch.LongTensor([length])
+		return mel, speaker, length
  
 	def get_speaker_number(self):
 		return self.speaker_num
@@ -147,11 +150,11 @@ from torch.nn.utils.rnn import pad_sequence
 def collate_batch(batch):
 	# Process features within a batch.
 	"""Collate a batch of data."""
-	mel, speaker = zip(*batch)
+	mel, speaker, lengths = zip(*batch)
 	# Because we train the model batch by batch, we need to pad the features in the same batch to make their lengths the same.
 	mel = pad_sequence(mel, batch_first=True, padding_value=-20)    # pad log 10^(-20) which is very small value.
 	# mel: (batch size, length, 40)
-	return mel, torch.FloatTensor(speaker).long()
+	return mel, torch.FloatTensor(speaker).long(), torch.LongTensor(lengths)
 
 
 def get_dataloader(data_dir, batch_size, n_workers):
@@ -210,48 +213,88 @@ def get_dataloader(data_dir, batch_size, n_workers):
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
+import torchaudio.models as models
 
 class Classifier(nn.Module):
 	def __init__(self, d_model=80, n_spks=600, dropout=0.1):
 		super().__init__()
 		# Project the dimension of features from that of input into d_model.
 		self.prenet = nn.Linear(40, d_model)
+
 		# TODO:
 		#   Change Transformer to Conformer.
 		#   https://arxiv.org/abs/2005.08100
-		self.encoder_layer = nn.TransformerEncoderLayer(
-			d_model=d_model, dim_feedforward=256, nhead=2
+		# self.encoder_layer = nn.TransformerEncoderLayer(
+		# 	d_model=d_model, dim_feedforward=256, nhead=2
+		# )
+		# self.encoder = nn.TransformerEncoder(self.encoder_layer, num_layers=5)
+
+		self.conformer = models.Conformer(
+			input_dim=d_model,
+			num_heads=1,
+			ffn_dim=128,
+			num_layers=4,
+			depthwise_conv_kernel_size=17,
+			# dropout=dropout
 		)
-		# self.encoder = nn.TransformerEncoder(self.encoder_layer, num_layers=2)
+
+		self.att_pool = nn.Sequential(
+			nn.Linear(d_model, 1),
+			nn.Softmax(dim=1)
+		)
 
 		# Project the the dimension of features from d_model into speaker nums.
 		self.pred_layer = nn.Sequential(
 			nn.Linear(d_model, d_model),
 			nn.ReLU(),
+			# nn.Dropout(p=dropout),
 			nn.Linear(d_model, n_spks),
 		)
 
-	def forward(self, mels):
+	def forward(self, mels, lengths):
 		"""
 		args:
 			mels: (batch size, length, 40)
 		return:
 			out: (batch size, n_spks)
 		"""
+
 		# out: (batch size, length, d_model)
 		out = self.prenet(mels)
 		# out: (length, batch size, d_model)
-		out = out.permute(1, 0, 2)
+		# out = out.permute(1, 0, 2)
+
 		# The encoder layer expect features in the shape of (length, batch size, d_model).
-		out = self.encoder_layer(out)
+		# out = self.encoder_layer(out)
+		# out = self.encoder(out)
+
 		# out: (batch size, length, d_model)
-		out = out.transpose(0, 1)
+		# out = out.transpose(0, 1)
+
+		# Use Conformer
+		out, _ = self.conformer(out, lengths)
+		# print(f'out.shape = {out.shape}')
+
+		#
 		# mean pooling
-		stats = out.mean(dim=1)
+		#
+		# stats = out.mean(dim=1)
 
 		# out: (batch, n_spks)
-		out = self.pred_layer(stats)
+		# out = self.pred_layer(stats)
+
+		#
+		# self attention pooling
+		#
+		pool = self.att_pool(out)
+		pool = torch.transpose(pool, 1, 2)
+		# print(f'pool.shape = {pool.shape}')
+
+		rep = torch.matmul(pool, out)
+		# print(f'rep.shape = {rep.shape}')
+
+		out = self.pred_layer(torch.squeeze(rep, dim=1))
+
 		return out
 
 """# Learning rate schedule
@@ -321,11 +364,12 @@ import torch
 def model_fn(batch, model, criterion, device):
 	"""Forward a batch through the model."""
 
-	mels, labels = batch
+	mels, labels, lengths = batch
 	mels = mels.to(device)
 	labels = labels.to(device)
+	lengths = lengths.to(device)
 
-	outs = model(mels)
+	outs = model(mels, lengths)
 
 	loss = criterion(outs, labels)
 
@@ -367,9 +411,10 @@ def valid(dataloader, model, criterion, device):
 	pbar.close()
 	model.train()
 
-	return running_accuracy / len(dataloader)
+	return running_loss / len(dataloader), running_accuracy / len(dataloader)
 
 """# Main function"""
+from datetime import datetime
 
 from tqdm import tqdm
 
@@ -383,7 +428,7 @@ def parse_args():
 	"""arguments"""
 	config = {
 		"data_dir": "./Dataset",
-		"save_path": "model.ckpt",
+		"save_path": f"./{model_name}.ckpt",
 		"batch_size": 32,
 		"n_workers": 8,
 		"valid_steps": 2000,
@@ -405,6 +450,10 @@ def main(
 	total_steps,
 	save_steps,
 ):
+	
+	with open(f"./{model_name}_log.txt","w") as f:
+		f.write(f'training start: {datetime.now()}\n') 
+
 	"""Main function."""
 	device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 	print(f"[Info]: Use {device} now!")
@@ -414,13 +463,16 @@ def main(
 	print(f"[Info]: Finish loading data!",flush = True)
 
 	model = Classifier(n_spks=speaker_num).to(device)
+
 	criterion = nn.CrossEntropyLoss()
+
 	optimizer = AdamW(model.parameters(), lr=1e-3)
 	scheduler = get_cosine_schedule_with_warmup(optimizer, warmup_steps, total_steps)
 	print(f"[Info]: Finish creating model!",flush = True)
 
 	best_accuracy = -1.0
 	best_state_dict = None
+	train_loss, train_accuracy = 0.0, 0.0
 
 	pbar = tqdm(total=valid_steps, ncols=0, desc="Train", unit=" step")
 
@@ -435,6 +487,8 @@ def main(
 		loss, accuracy = model_fn(batch, model, criterion, device)
 		batch_loss = loss.item()
 		batch_accuracy = accuracy.item()
+		train_loss += batch_loss
+		train_accuracy += batch_accuracy
 
 		# Updata model
 		loss.backward()
@@ -454,14 +508,21 @@ def main(
 		if (step + 1) % valid_steps == 0:
 			pbar.close()
 
-			valid_accuracy = valid(valid_loader, model, criterion, device)
+			valid_loss, valid_accuracy = valid(valid_loader, model, criterion, device)
 
 			# keep the best model
 			if valid_accuracy > best_accuracy:
 				best_accuracy = valid_accuracy
 				best_state_dict = model.state_dict()
+				with open(f"./{model_name}_log.txt","a") as f:
+					f.write(f"[ {step + 1:06d}/{total_steps:06d} ] Train loss = {train_loss / valid_steps:.5f}, Train acc = {train_accuracy / valid_steps:.5f} || Valid loss = {valid_loss:.5f},  Valid acc = {valid_accuracy:.5f} -> best\n")
+    
+			else:
+				with open(f"./{model_name}_log.txt","a") as f:
+					f.write(f"[ {step + 1:06d}/{total_steps:06d} ] Train loss = {train_loss / valid_steps:.5f}, Train acc = {train_accuracy / valid_steps:.5f} || Valid loss = {valid_loss:.5f},  Valid acc = {valid_accuracy:.5f}\n")
 
 			pbar = tqdm(total=valid_steps, ncols=0, desc="Train", unit=" step")
+			train_loss, train_accuracy = 0.0, 0.0
 
 		# Save the best model so far.
 		if (step + 1) % save_steps == 0 and best_state_dict is not None:
@@ -469,6 +530,10 @@ def main(
 			pbar.write(f"Step {step + 1}, best model saved. (accuracy={best_accuracy:.4f})")
 
 	pbar.close()
+
+	with open(f"./{model_name}_log.txt","a") as f:
+		f.write(f'training finish: {datetime.now()}\n') 
+
 
 
 if __name__ == "__main__":
@@ -524,8 +589,8 @@ def parse_args():
 	"""arguments"""
 	config = {
 		"data_dir": "./Dataset",
-		"model_path": "./model.ckpt",
-		"output_path": "./output.csv",
+		"model_path": f"./{model_name}.ckpt",
+		"output_path": f"./{model_name}.csv",
 	}
 
 	return config
@@ -558,13 +623,17 @@ def main(
 	model = Classifier(n_spks=speaker_num).to(device)
 	model.load_state_dict(torch.load(model_path))
 	model.eval()
-	print(f"[Info]: Finish creating model!",flush = True)
+	print(f"[Info]: Finish creating model!",flush = True)	
 
+	pbar = tqdm(dataloader, desc="Test", unit=" uttr")
+	
 	results = [["Id", "Category"]]
-	for feat_paths, mels in tqdm(dataloader):
-		with torch.no_grad():
+	with torch.no_grad():
+		for feat_paths, mels in pbar:
 			mels = mels.to(device)
-			outs = model(mels)
+			# print(mels.shape)
+			lengths = torch.LongTensor([mels.shape[1]]).to(device)
+			outs = model(mels, lengths)
 			preds = outs.argmax(1).cpu().numpy()
 			for feat_path, pred in zip(feat_paths, preds):
 				results.append([feat_path, mapping["id2speaker"][str(pred)]])
