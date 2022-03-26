@@ -1,0 +1,37 @@
+training start: 2022-03-26 12:27:35.145344
+[ 002000/070000 ] Train loss = 17.53067, Train acc = 0.03703 || Valid loss = 16.45864,  Valid acc = 0.09057 -> best
+[ 004000/070000 ] Train loss = 15.92764, Train acc = 0.15444 || Valid loss = 15.70140,  Valid acc = 0.17894 -> best
+[ 006000/070000 ] Train loss = 15.07051, Train acc = 0.26456 || Valid loss = 14.93068,  Valid acc = 0.28381 -> best
+[ 008000/070000 ] Train loss = 14.32400, Train acc = 0.34830 || Valid loss = 14.22243,  Valid acc = 0.36238 -> best
+[ 010000/070000 ] Train loss = 13.56389, Train acc = 0.42314 || Valid loss = 13.48510,  Valid acc = 0.42885 -> best
+[ 012000/070000 ] Train loss = 12.78130, Train acc = 0.48552 || Valid loss = 12.98338,  Valid acc = 0.46734 -> best
+[ 014000/070000 ] Train loss = 12.06811, Train acc = 0.53598 || Valid loss = 12.25040,  Valid acc = 0.51156 -> best
+[ 016000/070000 ] Train loss = 11.40270, Train acc = 0.57739 || Valid loss = 11.77318,  Valid acc = 0.54511 -> best
+[ 018000/070000 ] Train loss = 10.72420, Train acc = 0.61145 || Valid loss = 11.15317,  Valid acc = 0.57760 -> best
+[ 020000/070000 ] Train loss = 10.13193, Train acc = 0.64327 || Valid loss = 10.57015,  Valid acc = 0.61273 -> best
+[ 022000/070000 ] Train loss = 9.53101, Train acc = 0.67488 || Valid loss = 10.36635,  Valid acc = 0.62332 -> best
+[ 024000/070000 ] Train loss = 9.05848, Train acc = 0.69550 || Valid loss = 9.76814,  Valid acc = 0.65537 -> best
+[ 026000/070000 ] Train loss = 8.51864, Train acc = 0.71883 || Valid loss = 9.45172,  Valid acc = 0.66870 -> best
+[ 028000/070000 ] Train loss = 8.10808, Train acc = 0.73781 || Valid loss = 9.09372,  Valid acc = 0.68556 -> best
+[ 030000/070000 ] Train loss = 7.70571, Train acc = 0.75242 || Valid loss = 8.75586,  Valid acc = 0.69977 -> best
+[ 032000/070000 ] Train loss = 7.27964, Train acc = 0.77197 || Valid loss = 8.36172,  Valid acc = 0.71540 -> best
+[ 034000/070000 ] Train loss = 7.00512, Train acc = 0.78263 || Valid loss = 8.12596,  Valid acc = 0.72828 -> best
+[ 036000/070000 ] Train loss = 6.57513, Train acc = 0.79967 || Valid loss = 7.89433,  Valid acc = 0.74100 -> best
+[ 038000/070000 ] Train loss = 6.30579, Train acc = 0.81045 || Valid loss = 7.55155,  Valid acc = 0.75494 -> best
+[ 040000/070000 ] Train loss = 5.97637, Train acc = 0.82223 || Valid loss = 7.45425,  Valid acc = 0.75680 -> best
+[ 042000/070000 ] Train loss = 5.70727, Train acc = 0.83447 || Valid loss = 7.23093,  Valid acc = 0.76156 -> best
+[ 044000/070000 ] Train loss = 5.45284, Train acc = 0.84267 || Valid loss = 7.07036,  Valid acc = 0.77216 -> best
+[ 046000/070000 ] Train loss = 5.20322, Train acc = 0.85266 || Valid loss = 6.85782,  Valid acc = 0.77904 -> best
+[ 048000/070000 ] Train loss = 5.00581, Train acc = 0.86042 || Valid loss = 6.58545,  Valid acc = 0.79096 -> best
+[ 050000/070000 ] Train loss = 4.76613, Train acc = 0.86919 || Valid loss = 6.52910,  Valid acc = 0.79193 -> best
+[ 052000/070000 ] Train loss = 4.62019, Train acc = 0.87303 || Valid loss = 6.43445,  Valid acc = 0.79635 -> best
+[ 054000/070000 ] Train loss = 4.43137, Train acc = 0.88052 || Valid loss = 6.32971,  Valid acc = 0.80067 -> best
+[ 056000/070000 ] Train loss = 4.28232, Train acc = 0.88509 || Valid loss = 6.30840,  Valid acc = 0.79431
+[ 058000/070000 ] Train loss = 4.18836, Train acc = 0.88933 || Valid loss = 6.15354,  Valid acc = 0.80623 -> best
+[ 060000/070000 ] Train loss = 4.05016, Train acc = 0.89422 || Valid loss = 6.04945,  Valid acc = 0.81197 -> best
+[ 062000/070000 ] Train loss = 3.98275, Train acc = 0.89581 || Valid loss = 6.04211,  Valid acc = 0.81232 -> best
+[ 064000/070000 ] Train loss = 3.90684, Train acc = 0.89884 || Valid loss = 5.99129,  Valid acc = 0.81109
+[ 066000/070000 ] Train loss = 3.90399, Train acc = 0.89881 || Valid loss = 5.98504,  Valid acc = 0.81471 -> best
+[ 068000/070000 ] Train loss = 3.88211, Train acc = 0.89870 || Valid loss = 6.00055,  Valid acc = 0.81003
+[ 070000/070000 ] Train loss = 3.84318, Train acc = 0.90059 || Valid loss = 6.00294,  Valid acc = 0.80906
+training finish: 2022-03-26 16:57:24.708910

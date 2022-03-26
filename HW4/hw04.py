@@ -34,7 +34,7 @@ Original file is located at
 # unzip the file
 # !tar zxvf Dataset.tar.gz
 
-model_name = "AMSoftmax"
+model_name = "AMSoftmax_2_Long"
 
 """## Fix Random Seed"""
 
@@ -232,9 +232,9 @@ class Classifier(nn.Module):
 		self.conformer = models.Conformer(
 			input_dim=d_model,
 			num_heads=1,
-			ffn_dim=64,
-			num_layers=5,
-			depthwise_conv_kernel_size=5,
+			ffn_dim=80,
+			num_layers=9,
+			depthwise_conv_kernel_size=25,
 			# dropout=dropout
 		)
 
@@ -464,7 +464,7 @@ def parse_args():
 		"valid_steps": 2000,
 		"warmup_steps": 1000,
 		"save_steps": 10000,
-		"total_steps": 70000,
+		"total_steps": 350000,
 	}
 
 	return config
