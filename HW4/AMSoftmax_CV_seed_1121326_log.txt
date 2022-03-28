@@ -1,0 +1,107 @@
+training start: 2022-03-28 13:42:35.736290
+[ 002000/210000 ] Train loss = 17.08075, Train acc = 0.09206 || Valid loss = 15.43684,  Valid acc = 0.23517 -> best
+[ 004000/210000 ] Train loss = 14.72990, Train acc = 0.32647 || Valid loss = 14.09165,  Valid acc = 0.39460 -> best
+[ 006000/210000 ] Train loss = 13.32275, Train acc = 0.46866 || Valid loss = 12.80040,  Valid acc = 0.49276 -> best
+[ 008000/210000 ] Train loss = 12.01934, Train acc = 0.56252 || Valid loss = 11.63392,  Valid acc = 0.57645 -> best
+[ 010000/210000 ] Train loss = 10.80488, Train acc = 0.62867 || Valid loss = 10.81486,  Valid acc = 0.61264 -> best
+[ 012000/210000 ] Train loss = 9.82350, Train acc = 0.67308 || Valid loss = 9.86473,  Valid acc = 0.66419 -> best
+[ 014000/210000 ] Train loss = 9.02344, Train acc = 0.70769 || Valid loss = 9.15697,  Valid acc = 0.68980 -> best
+[ 016000/210000 ] Train loss = 8.36578, Train acc = 0.73345 || Valid loss = 8.74160,  Valid acc = 0.70180 -> best
+[ 018000/210000 ] Train loss = 7.82187, Train acc = 0.75211 || Valid loss = 8.55159,  Valid acc = 0.71999 -> best
+[ 020000/210000 ] Train loss = 7.35390, Train acc = 0.76866 || Valid loss = 8.03818,  Valid acc = 0.73570 -> best
+[ 022000/210000 ] Train loss = 7.02462, Train acc = 0.77995 || Valid loss = 7.72126,  Valid acc = 0.74770 -> best
+[ 024000/210000 ] Train loss = 6.65455, Train acc = 0.79377 || Valid loss = 7.45991,  Valid acc = 0.75565 -> best
+[ 026000/210000 ] Train loss = 6.35370, Train acc = 0.80459 || Valid loss = 7.32517,  Valid acc = 0.75777 -> best
+[ 028000/210000 ] Train loss = 6.13154, Train acc = 0.81084 || Valid loss = 7.07365,  Valid acc = 0.78143 -> best
+[ 030000/210000 ] Train loss = 5.91967, Train acc = 0.82069 || Valid loss = 6.75400,  Valid acc = 0.78125
+[ 032000/210000 ] Train loss = 5.72269, Train acc = 0.82566 || Valid loss = 6.79320,  Valid acc = 0.78708 -> best
+[ 034000/210000 ] Train loss = 5.52292, Train acc = 0.83372 || Valid loss = 6.74051,  Valid acc = 0.78231
+[ 036000/210000 ] Train loss = 5.34920, Train acc = 0.83881 || Valid loss = 6.42267,  Valid acc = 0.79767 -> best
+[ 038000/210000 ] Train loss = 5.23641, Train acc = 0.84303 || Valid loss = 6.46061,  Valid acc = 0.79149
+[ 040000/210000 ] Train loss = 5.07626, Train acc = 0.84870 || Valid loss = 6.27926,  Valid acc = 0.79714
+[ 042000/210000 ] Train loss = 4.92639, Train acc = 0.85303 || Valid loss = 6.18048,  Valid acc = 0.80102 -> best
+[ 044000/210000 ] Train loss = 4.86260, Train acc = 0.85453 || Valid loss = 6.12196,  Valid acc = 0.80191 -> best
+[ 046000/210000 ] Train loss = 4.71482, Train acc = 0.86292 || Valid loss = 5.99471,  Valid acc = 0.80897 -> best
+[ 048000/210000 ] Train loss = 4.58779, Train acc = 0.86495 || Valid loss = 6.10760,  Valid acc = 0.80332
+[ 050000/210000 ] Train loss = 4.48231, Train acc = 0.86750 || Valid loss = 5.94565,  Valid acc = 0.80738
+[ 052000/210000 ] Train loss = 4.41424, Train acc = 0.87022 || Valid loss = 5.98157,  Valid acc = 0.81003 -> best
+[ 054000/210000 ] Train loss = 4.31815, Train acc = 0.87355 || Valid loss = 5.76561,  Valid acc = 0.81727 -> best
+[ 056000/210000 ] Train loss = 4.23993, Train acc = 0.87648 || Valid loss = 5.57614,  Valid acc = 0.81815 -> best
+[ 058000/210000 ] Train loss = 4.18412, Train acc = 0.87661 || Valid loss = 5.67128,  Valid acc = 0.82221 -> best
+[ 060000/210000 ] Train loss = 4.08811, Train acc = 0.88044 || Valid loss = 5.52911,  Valid acc = 0.82733 -> best
+[ 062000/210000 ] Train loss = 4.03469, Train acc = 0.88320 || Valid loss = 5.61299,  Valid acc = 0.82857 -> best
+[ 064000/210000 ] Train loss = 3.92434, Train acc = 0.88628 || Valid loss = 5.58821,  Valid acc = 0.82115
+[ 066000/210000 ] Train loss = 3.89880, Train acc = 0.88584 || Valid loss = 5.43427,  Valid acc = 0.82892 -> best
+[ 068000/210000 ] Train loss = 3.81086, Train acc = 0.89013 || Valid loss = 5.40959,  Valid acc = 0.83157 -> best
+[ 070000/210000 ] Train loss = 3.74961, Train acc = 0.89245 || Valid loss = 5.17084,  Valid acc = 0.83633 -> best
+[ 072000/210000 ] Train loss = 3.64017, Train acc = 0.89556 || Valid loss = 5.39375,  Valid acc = 0.82927
+[ 074000/210000 ] Train loss = 3.62726, Train acc = 0.89772 || Valid loss = 5.14874,  Valid acc = 0.83563
+[ 076000/210000 ] Train loss = 3.59135, Train acc = 0.89858 || Valid loss = 5.16353,  Valid acc = 0.83898 -> best
+[ 078000/210000 ] Train loss = 3.51216, Train acc = 0.90131 || Valid loss = 5.13412,  Valid acc = 0.83192
+[ 080000/210000 ] Train loss = 3.39379, Train acc = 0.90606 || Valid loss = 5.44004,  Valid acc = 0.82539
+[ 082000/210000 ] Train loss = 3.39698, Train acc = 0.90463 || Valid loss = 5.16728,  Valid acc = 0.83245
+[ 084000/210000 ] Train loss = 3.34850, Train acc = 0.90552 || Valid loss = 4.96331,  Valid acc = 0.84587 -> best
+[ 086000/210000 ] Train loss = 3.27945, Train acc = 0.90823 || Valid loss = 5.08419,  Valid acc = 0.83581
+[ 088000/210000 ] Train loss = 3.20518, Train acc = 0.91077 || Valid loss = 4.99851,  Valid acc = 0.84499
+[ 090000/210000 ] Train loss = 3.15488, Train acc = 0.91336 || Valid loss = 4.99095,  Valid acc = 0.84304
+[ 092000/210000 ] Train loss = 3.14495, Train acc = 0.91275 || Valid loss = 4.84061,  Valid acc = 0.84710 -> best
+[ 094000/210000 ] Train loss = 3.09738, Train acc = 0.91459 || Valid loss = 4.79900,  Valid acc = 0.85293 -> best
+[ 096000/210000 ] Train loss = 2.95596, Train acc = 0.92019 || Valid loss = 4.95100,  Valid acc = 0.84605
+[ 098000/210000 ] Train loss = 2.92525, Train acc = 0.92059 || Valid loss = 4.84273,  Valid acc = 0.84569
+[ 100000/210000 ] Train loss = 2.91525, Train acc = 0.92092 || Valid loss = 4.89044,  Valid acc = 0.84622
+[ 102000/210000 ] Train loss = 2.89369, Train acc = 0.92278 || Valid loss = 4.80259,  Valid acc = 0.84534
+[ 104000/210000 ] Train loss = 2.82069, Train acc = 0.92388 || Valid loss = 4.51746,  Valid acc = 0.86158 -> best
+[ 106000/210000 ] Train loss = 2.74761, Train acc = 0.92612 || Valid loss = 4.71831,  Valid acc = 0.85046
+[ 108000/210000 ] Train loss = 2.72847, Train acc = 0.92627 || Valid loss = 4.63235,  Valid acc = 0.85258
+[ 110000/210000 ] Train loss = 2.68384, Train acc = 0.92852 || Valid loss = 4.63677,  Valid acc = 0.85505
+[ 112000/210000 ] Train loss = 2.63144, Train acc = 0.93023 || Valid loss = 4.68987,  Valid acc = 0.84940
+[ 114000/210000 ] Train loss = 2.60310, Train acc = 0.93137 || Valid loss = 4.58089,  Valid acc = 0.86070
+[ 116000/210000 ] Train loss = 2.49348, Train acc = 0.93466 || Valid loss = 4.60588,  Valid acc = 0.85293
+[ 118000/210000 ] Train loss = 2.49025, Train acc = 0.93509 || Valid loss = 4.47540,  Valid acc = 0.86141
+[ 120000/210000 ] Train loss = 2.43831, Train acc = 0.93648 || Valid loss = 4.30673,  Valid acc = 0.86794 -> best
+[ 122000/210000 ] Train loss = 2.40482, Train acc = 0.93772 || Valid loss = 4.36186,  Valid acc = 0.86458
+[ 124000/210000 ] Train loss = 2.36133, Train acc = 0.93842 || Valid loss = 4.48519,  Valid acc = 0.86246
+[ 126000/210000 ] Train loss = 2.30339, Train acc = 0.94075 || Valid loss = 4.51096,  Valid acc = 0.86176
+[ 128000/210000 ] Train loss = 2.22252, Train acc = 0.94333 || Valid loss = 4.32837,  Valid acc = 0.86723
+[ 130000/210000 ] Train loss = 2.21275, Train acc = 0.94405 || Valid loss = 4.19547,  Valid acc = 0.87218 -> best
+[ 132000/210000 ] Train loss = 2.17974, Train acc = 0.94481 || Valid loss = 4.16149,  Valid acc = 0.87588 -> best
+[ 134000/210000 ] Train loss = 2.16295, Train acc = 0.94564 || Valid loss = 4.23030,  Valid acc = 0.87182
+[ 136000/210000 ] Train loss = 2.11970, Train acc = 0.94695 || Valid loss = 4.14428,  Valid acc = 0.87253
+[ 138000/210000 ] Train loss = 2.08112, Train acc = 0.94852 || Valid loss = 4.16738,  Valid acc = 0.87235
+[ 140000/210000 ] Train loss = 2.02562, Train acc = 0.94923 || Valid loss = 4.16922,  Valid acc = 0.87429
+[ 142000/210000 ] Train loss = 1.98690, Train acc = 0.95173 || Valid loss = 4.17784,  Valid acc = 0.86970
+[ 144000/210000 ] Train loss = 1.96616, Train acc = 0.95189 || Valid loss = 4.19390,  Valid acc = 0.87165
+[ 146000/210000 ] Train loss = 1.93147, Train acc = 0.95294 || Valid loss = 4.03315,  Valid acc = 0.87553
+[ 148000/210000 ] Train loss = 1.88505, Train acc = 0.95373 || Valid loss = 4.09641,  Valid acc = 0.87535
+[ 150000/210000 ] Train loss = 1.82861, Train acc = 0.95505 || Valid loss = 4.09985,  Valid acc = 0.87165
+[ 152000/210000 ] Train loss = 1.77954, Train acc = 0.95798 || Valid loss = 4.10700,  Valid acc = 0.87429
+[ 154000/210000 ] Train loss = 1.76986, Train acc = 0.95817 || Valid loss = 4.03643,  Valid acc = 0.87694 -> best
+[ 156000/210000 ] Train loss = 1.76154, Train acc = 0.95775 || Valid loss = 4.05870,  Valid acc = 0.87535
+[ 158000/210000 ] Train loss = 1.72001, Train acc = 0.95930 || Valid loss = 4.03452,  Valid acc = 0.87818 -> best
+[ 160000/210000 ] Train loss = 1.69009, Train acc = 0.96058 || Valid loss = 3.87379,  Valid acc = 0.88012 -> best
+[ 162000/210000 ] Train loss = 1.65003, Train acc = 0.96211 || Valid loss = 3.90916,  Valid acc = 0.87835
+[ 164000/210000 ] Train loss = 1.63819, Train acc = 0.96217 || Valid loss = 3.89148,  Valid acc = 0.88136 -> best
+[ 166000/210000 ] Train loss = 1.60956, Train acc = 0.96314 || Valid loss = 3.75095,  Valid acc = 0.88453 -> best
+[ 168000/210000 ] Train loss = 1.58129, Train acc = 0.96406 || Valid loss = 3.97519,  Valid acc = 0.87518
+[ 170000/210000 ] Train loss = 1.58054, Train acc = 0.96286 || Valid loss = 3.77153,  Valid acc = 0.88665 -> best
+[ 172000/210000 ] Train loss = 1.55024, Train acc = 0.96483 || Valid loss = 3.81244,  Valid acc = 0.88224
+[ 174000/210000 ] Train loss = 1.53058, Train acc = 0.96528 || Valid loss = 3.84948,  Valid acc = 0.88189
+[ 176000/210000 ] Train loss = 1.50285, Train acc = 0.96548 || Valid loss = 3.77928,  Valid acc = 0.88542
+[ 178000/210000 ] Train loss = 1.48231, Train acc = 0.96664 || Valid loss = 3.81810,  Valid acc = 0.88383
+[ 180000/210000 ] Train loss = 1.45571, Train acc = 0.96822 || Valid loss = 3.83670,  Valid acc = 0.88400
+[ 182000/210000 ] Train loss = 1.44784, Train acc = 0.96855 || Valid loss = 3.80585,  Valid acc = 0.88065
+[ 184000/210000 ] Train loss = 1.41347, Train acc = 0.96937 || Valid loss = 3.66731,  Valid acc = 0.89001 -> best
+[ 186000/210000 ] Train loss = 1.39546, Train acc = 0.96937 || Valid loss = 3.83695,  Valid acc = 0.87977
+[ 188000/210000 ] Train loss = 1.39886, Train acc = 0.96906 || Valid loss = 3.80760,  Valid acc = 0.88206
+[ 190000/210000 ] Train loss = 1.41076, Train acc = 0.96861 || Valid loss = 3.73444,  Valid acc = 0.88559
+[ 192000/210000 ] Train loss = 1.39418, Train acc = 0.96806 || Valid loss = 3.68968,  Valid acc = 0.88824
+[ 194000/210000 ] Train loss = 1.34549, Train acc = 0.97117 || Valid loss = 3.82935,  Valid acc = 0.88189
+[ 196000/210000 ] Train loss = 1.36372, Train acc = 0.97006 || Valid loss = 3.80534,  Valid acc = 0.88047
+[ 198000/210000 ] Train loss = 1.35671, Train acc = 0.96962 || Valid loss = 3.76156,  Valid acc = 0.88436
+[ 200000/210000 ] Train loss = 1.32388, Train acc = 0.97161 || Valid loss = 3.71326,  Valid acc = 0.89001
+[ 202000/210000 ] Train loss = 1.33487, Train acc = 0.97136 || Valid loss = 3.71486,  Valid acc = 0.88824
+[ 204000/210000 ] Train loss = 1.32171, Train acc = 0.97152 || Valid loss = 3.80084,  Valid acc = 0.88577
+[ 206000/210000 ] Train loss = 1.35047, Train acc = 0.97020 || Valid loss = 3.72116,  Valid acc = 0.88630
+[ 208000/210000 ] Train loss = 1.34166, Train acc = 0.97011 || Valid loss = 3.71429,  Valid acc = 0.88754
+[ 210000/210000 ] Train loss = 1.33205, Train acc = 0.97039 || Valid loss = 3.69964,  Valid acc = 0.88877
+training finish: 2022-03-29 01:23:49.952375

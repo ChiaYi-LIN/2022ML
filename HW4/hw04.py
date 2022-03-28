@@ -34,7 +34,7 @@ Original file is located at
 # unzip the file
 # !tar zxvf Dataset.tar.gz
 
-model_name = "AMSoftmax_2_Long"
+model_name = "AMSoftmax_CV_seed_326"
 
 """## Fix Random Seed"""
 
@@ -52,7 +52,7 @@ def set_seed(seed):
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True
 
-set_seed(1)
+set_seed(326)
 
 """# Data
 
@@ -162,7 +162,7 @@ def get_dataloader(data_dir, batch_size, n_workers):
 	dataset = myDataset(data_dir)
 	speaker_num = dataset.get_speaker_number()
 	# Split dataset into training dataset and validation dataset
-	trainlen = int(0.8 * len(dataset))
+	trainlen = int(0.9 * len(dataset))
 	lengths = [trainlen, len(dataset) - trainlen]
 	trainset, validset = random_split(dataset, lengths)
 
@@ -233,9 +233,9 @@ class Classifier(nn.Module):
 			input_dim=d_model,
 			num_heads=1,
 			ffn_dim=80,
-			num_layers=9,
+			num_layers=3,
 			depthwise_conv_kernel_size=25,
-			# dropout=dropout
+			# dropout=dropout,
 		)
 
 		self.att_pool = nn.Sequential(
@@ -244,11 +244,11 @@ class Classifier(nn.Module):
 		)
 
 		# Project the the dimension of features from d_model into speaker nums.
-		self.ffn = nn.Sequential(
-			nn.Linear(d_model, d_model),
-			nn.ReLU(),
-			# nn.Dropout(p=dropout),
-		)
+		# self.ffn = nn.Sequential(
+		# 	nn.Linear(d_model, d_model),
+		# 	nn.ReLU(),
+		# 	# nn.Dropout(p=dropout),
+		# )
 
 		self.s = 30.0
 		self.m = 0.4
@@ -302,7 +302,8 @@ class Classifier(nn.Module):
 		# print(f'rep.shape = {rep.shape}')
 		rep = torch.squeeze(rep, dim=1)
 		
-		x = self.ffn(rep)
+		# x = self.ffn(rep)
+		x = rep
 
 		out = self.pred(x)
 
@@ -464,7 +465,7 @@ def parse_args():
 		"valid_steps": 2000,
 		"warmup_steps": 1000,
 		"save_steps": 10000,
-		"total_steps": 350000,
+		"total_steps": 210000,
 	}
 
 	return config

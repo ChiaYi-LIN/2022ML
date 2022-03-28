@@ -5,7 +5,7 @@
 """
 
 data_dir = "./Dataset"
-output_name = "ensemble"
+output_name = "ensemble_80_80_3_25_finish"
 
 import os
 import json
@@ -32,10 +32,10 @@ class Classifier(nn.Module):
 		self.conformer = models.Conformer(
 			input_dim=d_model,
 			num_heads=1,
-			ffn_dim=64,
-			num_layers=5,
-			depthwise_conv_kernel_size=5,
-			# dropout=dropout
+			ffn_dim=80,
+			num_layers=3,
+			depthwise_conv_kernel_size=25,
+			# dropout=dropout,
 		)
 
 		self.att_pool = nn.Sequential(
@@ -44,14 +44,17 @@ class Classifier(nn.Module):
 		)
 
 		# Project the the dimension of features from d_model into speaker nums.
-		self.pred_layer = nn.Sequential(
-			nn.Linear(d_model, d_model),
-			nn.ReLU(),
-			# nn.Dropout(p=dropout),
-			nn.Linear(d_model, n_spks),
-		)
+		# self.ffn = nn.Sequential(
+		# 	nn.Linear(d_model, d_model),
+		# 	nn.ReLU(),
+		# 	# nn.Dropout(p=dropout),
+		# )
 
-	def forward(self, mels, lengths):
+		self.s = 30.0
+		self.m = 0.4
+		self.pred = nn.Linear(d_model, n_spks, bias=False)
+
+	def forward(self, mels, labels, lengths):
 		"""
 		args:
 			mels: (batch size, length, 40)
@@ -61,6 +64,10 @@ class Classifier(nn.Module):
 
 		# out: (batch size, length, d_model)
 		out = self.prenet(mels)
+
+		####
+		# Use Transformer Encoder
+		####
 		# out: (length, batch size, d_model)
 		# out = out.permute(1, 0, 2)
 
@@ -71,30 +78,53 @@ class Classifier(nn.Module):
 		# out: (batch size, length, d_model)
 		# out = out.transpose(0, 1)
 
+		####
 		# Use Conformer
+		####
 		out, _ = self.conformer(out, lengths)
 		# print(f'out.shape = {out.shape}')
 
-		#
+		####
 		# mean pooling
-		#
+		####
 		# stats = out.mean(dim=1)
 
 		# out: (batch, n_spks)
 		# out = self.pred_layer(stats)
 
-		#
+		####
 		# self attention pooling
-		#
+		####
 		pool = self.att_pool(out)
 		pool = torch.transpose(pool, 1, 2)
 		# print(f'pool.shape = {pool.shape}')
-
 		rep = torch.matmul(pool, out)
 		# print(f'rep.shape = {rep.shape}')
+		rep = torch.squeeze(rep, dim=1)
+		
+		# x = self.ffn(rep)
+		x = rep
 
-		out = self.pred_layer(torch.squeeze(rep, dim=1))
+		out = self.pred(x)
 
+		#
+		# AMSoftmax Loss
+		#
+		if labels is not None:
+			for W in self.pred.parameters():
+				W = F.normalize(W, dim=1)
+			
+			x = F.normalize(x, dim=1)
+
+			wf = self.pred(x)
+			numerator = self.s * (torch.diagonal(wf.transpose(0, 1)[labels]) - self.m)
+			excl = torch.cat([torch.cat((wf[i, :y], wf[i, y+1:])).unsqueeze(0) for i, y in enumerate(labels)], dim=0)
+			denominator = torch.log(torch.exp(numerator) + torch.sum(torch.exp(self.s * excl), dim=1))
+			L = numerator - denominator
+			loss = -torch.mean(L)
+
+			return out, loss
+		
 		return out
 
 class InferenceDataset(Dataset):
@@ -151,15 +181,15 @@ print(f"[Info]: Finish loading data!",flush = True)
 speaker_num = len(mapping["id2speaker"])
 
 model_1 = Classifier(n_spks=speaker_num).to(device)
-model_1.load_state_dict(torch.load('./attpool_1.ckpt'))
+model_1.load_state_dict(torch.load('./AMSoftmax_CV_seed_326.ckpt'))
 model_1.eval()
 
 model_2 = Classifier(n_spks=speaker_num).to(device)
-model_2.load_state_dict(torch.load('./attpool_2.ckpt'))
+model_2.load_state_dict(torch.load('./AMSoftmax_CV_seed_1121.ckpt'))
 model_2.eval()
 
 model_3 = Classifier(n_spks=speaker_num).to(device)
-model_3.load_state_dict(torch.load('./attpool_3.ckpt'))
+model_3.load_state_dict(torch.load('./AMSoftmax_CV_seed_1121326.ckpt'))
 model_3.eval()
 
 best_models = [model_1, model_2, model_3]
@@ -177,9 +207,9 @@ with torch.no_grad():
             # print(mels.shape)
             lengths = torch.LongTensor([mels.shape[1]]).to(device)
             if outs is None:
-                outs = best_model(mels, lengths)
+                outs = best_model(mels, None, lengths)
             else:
-                outs += best_model(mels, lengths)
+                outs += best_model(mels, None, lengths)
 
         preds = outs.argmax(1).cpu().numpy()
         for feat_path, pred in zip(feat_paths, preds):
