@@ -15,3 +15,6 @@ food11.zip
 *.partac
 *.partad
 Dataset/
+# HW5
+fairseq/
+DATA/
