@@ -18,3 +18,4 @@ Dataset/
 # HW5
 fairseq/
 DATA/
+checkpoints/
