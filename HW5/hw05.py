@@ -36,6 +36,7 @@ import pprint
 import logging
 import os
 import random
+from datetime import datetime
 
 import torch
 import torch.nn as nn
@@ -282,10 +283,12 @@ Out of vocabulary (OOV) has been a major problem in machine translation. This ca
 
 #%%
 """# Configuration for experiments"""
+pred_name = "ep35_L6_d512_f2048"
 config = Namespace(
     datadir = "./DATA/data-bin/ted2020",
-    savedir = "./checkpoints/rnn",
-    pred_name = 'sample',
+    logfile = f"./{pred_name}_log.txt",
+    output_name = f"./{pred_name}.txt",
+    savedir = f"./checkpoints/{pred_name}",
     source_lang = "en",
     target_lang = "zh",
     
@@ -303,7 +306,7 @@ config = Namespace(
     clip_norm=1.0,
     
     # maximum epochs for training
-    max_epoch=15,
+    max_epoch=35,
     start_epoch=1,
     
     # beam size for beam search
@@ -807,10 +810,10 @@ def build_model(args, task):
     
     # encoder decoder
     # HINT: TODO: switch to TransformerEncoder & TransformerDecoder
-    encoder = RNNEncoder(args, src_dict, encoder_embed_tokens)
-    decoder = RNNDecoder(args, tgt_dict, decoder_embed_tokens)
-    # encoder = TransformerEncoder(args, src_dict, encoder_embed_tokens)
-    # decoder = TransformerDecoder(args, tgt_dict, decoder_embed_tokens)
+    # encoder = RNNEncoder(args, src_dict, encoder_embed_tokens)
+    # decoder = RNNDecoder(args, tgt_dict, decoder_embed_tokens)
+    encoder = TransformerEncoder(args, src_dict, encoder_embed_tokens)
+    decoder = TransformerDecoder(args, tgt_dict, decoder_embed_tokens)
 
     # sequence to sequence model
     model = Seq2Seq(args, encoder, decoder)
@@ -845,12 +848,12 @@ def build_model(args, task):
 For strong baseline, please refer to the hyperparameters for *transformer-base* in Table 3 in [Attention is all you need](#vaswani2017)
 """
 arch_args = Namespace(
-    encoder_embed_dim=256,
-    encoder_ffn_embed_dim=512,
-    encoder_layers=1,
-    decoder_embed_dim=256,
-    decoder_ffn_embed_dim=1024,
-    decoder_layers=1,
+    encoder_embed_dim=512,
+    encoder_ffn_embed_dim=2048,
+    encoder_layers=6,
+    decoder_embed_dim=512,
+    decoder_ffn_embed_dim=2048,
+    decoder_layers=6,
     share_decoder_input_output_embed=True,
     dropout=0.3,
 )
@@ -871,7 +874,7 @@ def add_transformer_args(args):
     from fairseq.models.transformer import base_architecture
     base_architecture(arch_args)
 
-# add_transformer_args(arch_args)
+add_transformer_args(arch_args)
 
 if config.use_wandb:
     wandb.config.update(vars(arch_args))
@@ -933,7 +936,8 @@ $$lrate = d_{\text{model}}^{-0.5}\cdot\min({step\_num}^{-0.5},{step\_num}\cdot{w
 """
 def get_rate(d_model, step_num, warmup_step):
     # TODO: Change lr from constant to the equation shown above
-    lr = 0.001
+    # lr = 0.001
+    lr = pow(d_model, -0.5) * min(pow(step_num, -0.5), step_num * pow(warmup_step, -1.5))
     return lr
 
 class NoamOpt:
@@ -1047,6 +1051,9 @@ def train_one_epoch(epoch_itr, model, task, criterion, optimizer, accum_steps=1)
         
     loss_print = np.mean(stats["loss"])
     logger.info(f"training loss: {loss_print:.4f}")
+    with open(config.logfile,"a") as f:
+        f.write(f"[Epoch {epoch_itr.epoch}] Train loss = {loss_print:.5f} || ")
+    
     return stats
 
 #%%
@@ -1180,6 +1187,11 @@ def validate_and_save(model, task, criterion, optimizer, epoch, save=True):
         if getattr(validate_and_save, "best_bleu", 0) < bleu.score:
             validate_and_save.best_bleu = bleu.score
             torch.save(check, savedir/f"checkpoint_best.pt")
+            with open(config.logfile,"a") as f:
+                f.write(f"Valid loss = {loss:.5f} || {bleu.format()} <- best\n")
+        else:
+            with open(config.logfile,"a") as f:
+                f.write(f"Valid loss = {loss:.5f} || {bleu.format()}\n")
             
         del_file = savedir / f"checkpoint{epoch - config.keep_last_epochs}.pt"
         if del_file.exists():
@@ -1205,6 +1217,9 @@ def try_load_checkpoint(model, optimizer=None, name=None):
 """# Main
 ## Training loop
 """
+with open(config.logfile,"w") as f:
+	f.write(f'Training start: {datetime.now()}\n') 
+        
 model = model.to(device=device)
 criterion = criterion.to(device=device)
 
@@ -1230,6 +1245,9 @@ while epoch_itr.next_epoch_idx <= config.max_epoch:
     logger.info("end of epoch {}".format(epoch_itr.epoch))    
     epoch_itr = load_data_iterator(task, "train", epoch_itr.next_epoch_idx, config.max_tokens, config.num_workers)
 
+with open(config.logfile,"a") as f:
+	f.write(f'Training end: {datetime.now()}\n')
+
 #%%
 """# Submission"""
 
@@ -1252,7 +1270,7 @@ None
 #%%
 """## Generate Prediction"""
 
-def generate_prediction(model, task, split="test", outfile=f"./{config.pred_name}.txt"):    
+def generate_prediction(model, task, split="test", outfile=config.output_name):    
     task.load_dataset(split=split, epoch=1)
     itr = load_data_iterator(task, split, 1, config.max_tokens, config.num_workers).next_epoch_itr(shuffle=False)
     
