@@ -1,0 +1,37 @@
+Training start: 2022-03-30 18:59:43.683414
+[Epoch 1] Train loss = 6.72459 || Valid loss = 5.49673 || BLEU = 3.14 22.3/5.6/1.7/0.6 (BP = 0.944 ratio = 0.945 hyp_len = 105703 ref_len = 111811) <- best
+[Epoch 2] Train loss = 5.09819 || Valid loss = 4.61077 || BLEU = 10.75 40.4/16.9/7.8/3.8 (BP = 0.905 ratio = 0.909 hyp_len = 101687 ref_len = 111811) <- best
+[Epoch 3] Train loss = 4.45652 || Valid loss = 4.11565 || BLEU = 15.59 47.8/23.0/12.0/6.6 (BP = 0.909 ratio = 0.913 hyp_len = 102073 ref_len = 111811) <- best
+[Epoch 4] Train loss = 4.10658 || Valid loss = 3.90122 || BLEU = 17.68 54.6/28.1/15.4/8.8 (BP = 0.828 ratio = 0.841 hyp_len = 94067 ref_len = 111811) <- best
+[Epoch 5] Train loss = 3.91695 || Valid loss = 3.80354 || BLEU = 18.83 56.6/29.7/16.5/9.6 (BP = 0.828 ratio = 0.841 hyp_len = 94034 ref_len = 111811) <- best
+[Epoch 6] Train loss = 3.76759 || Valid loss = 3.62320 || BLEU = 21.71 55.5/29.8/16.9/10.1 (BP = 0.943 ratio = 0.945 hyp_len = 105621 ref_len = 111811) <- best
+[Epoch 7] Train loss = 3.61215 || Valid loss = 3.54972 || BLEU = 21.84 57.8/31.7/18.2/11.0 (BP = 0.887 ratio = 0.893 hyp_len = 99886 ref_len = 111811) <- best
+[Epoch 8] Train loss = 3.49919 || Valid loss = 3.44020 || BLEU = 23.51 57.6/31.8/18.5/11.3 (BP = 0.945 ratio = 0.947 hyp_len = 105856 ref_len = 111811) <- best
+[Epoch 9] Train loss = 3.41410 || Valid loss = 3.38478 || BLEU = 23.73 58.4/32.5/19.1/11.7 (BP = 0.930 ratio = 0.932 hyp_len = 104259 ref_len = 111811) <- best
+[Epoch 10] Train loss = 3.34592 || Valid loss = 3.35716 || BLEU = 24.47 57.9/32.5/19.1/11.8 (BP = 0.960 ratio = 0.960 hyp_len = 107380 ref_len = 111811) <- best
+[Epoch 11] Train loss = 3.29077 || Valid loss = 3.32998 || BLEU = 24.70 58.2/32.7/19.3/12.0 (BP = 0.959 ratio = 0.959 hyp_len = 107273 ref_len = 111811) <- best
+[Epoch 12] Train loss = 3.24640 || Valid loss = 3.29858 || BLEU = 24.98 59.5/33.9/20.2/12.7 (BP = 0.931 ratio = 0.933 hyp_len = 104367 ref_len = 111811) <- best
+[Epoch 13] Train loss = 3.20578 || Valid loss = 3.28383 || BLEU = 25.07 59.1/33.6/20.0/12.5 (BP = 0.944 ratio = 0.946 hyp_len = 105720 ref_len = 111811) <- best
+[Epoch 14] Train loss = 3.17138 || Valid loss = 3.27227 || BLEU = 25.49 59.6/34.2/20.6/13.0 (BP = 0.939 ratio = 0.941 hyp_len = 105162 ref_len = 111811) <- best
+[Epoch 15] Train loss = 3.13927 || Valid loss = 3.26662 || BLEU = 26.10 57.9/33.1/19.8/12.5 (BP = 0.995 ratio = 0.995 hyp_len = 111275 ref_len = 111811) <- best
+[Epoch 16] Train loss = 3.11197 || Valid loss = 3.24710 || BLEU = 25.82 60.0/34.4/20.8/13.1 (BP = 0.942 ratio = 0.944 hyp_len = 105543 ref_len = 111811)
+[Epoch 17] Train loss = 3.08600 || Valid loss = 3.23416 || BLEU = 26.08 59.5/34.3/20.7/13.1 (BP = 0.958 ratio = 0.958 hyp_len = 107159 ref_len = 111811)
+[Epoch 18] Train loss = 3.06435 || Valid loss = 3.22895 || BLEU = 26.12 59.4/34.2/20.7/13.0 (BP = 0.960 ratio = 0.961 hyp_len = 107420 ref_len = 111811) <- best
+[Epoch 19] Train loss = 3.04481 || Valid loss = 3.22569 || BLEU = 25.83 60.0/34.5/20.7/13.1 (BP = 0.945 ratio = 0.946 hyp_len = 105783 ref_len = 111811)
+[Epoch 20] Train loss = 3.02511 || Valid loss = 3.22434 || BLEU = 26.18 60.3/34.9/21.1/13.4 (BP = 0.943 ratio = 0.945 hyp_len = 105611 ref_len = 111811) <- best
+[Epoch 21] Train loss = 3.00794 || Valid loss = 3.21004 || BLEU = 26.37 59.9/34.6/21.1/13.4 (BP = 0.952 ratio = 0.954 hyp_len = 106613 ref_len = 111811) <- best
+[Epoch 22] Train loss = 2.99019 || Valid loss = 3.21972 || BLEU = 26.17 60.2/34.8/21.1/13.4 (BP = 0.944 ratio = 0.945 hyp_len = 105705 ref_len = 111811)
+[Epoch 23] Train loss = 2.97594 || Valid loss = 3.20832 || BLEU = 26.23 60.6/35.1/21.3/13.6 (BP = 0.936 ratio = 0.938 hyp_len = 104832 ref_len = 111811)
+[Epoch 24] Train loss = 2.95999 || Valid loss = 3.20658 || BLEU = 26.36 59.8/34.6/20.9/13.2 (BP = 0.959 ratio = 0.960 hyp_len = 107285 ref_len = 111811)
+[Epoch 25] Train loss = 2.94753 || Valid loss = 3.20793 || BLEU = 26.67 60.7/35.3/21.5/13.7 (BP = 0.945 ratio = 0.947 hyp_len = 105867 ref_len = 111811) <- best
+[Epoch 26] Train loss = 2.93529 || Valid loss = 3.19415 || BLEU = 26.20 60.7/35.3/21.5/13.7 (BP = 0.930 ratio = 0.932 hyp_len = 104205 ref_len = 111811)
+[Epoch 27] Train loss = 2.92204 || Valid loss = 3.20127 || BLEU = 26.61 60.4/35.1/21.4/13.7 (BP = 0.948 ratio = 0.950 hyp_len = 106193 ref_len = 111811)
+[Epoch 28] Train loss = 2.90983 || Valid loss = 3.19571 || BLEU = 26.04 61.3/35.6/21.6/13.8 (BP = 0.917 ratio = 0.921 hyp_len = 102928 ref_len = 111811)
+[Epoch 29] Train loss = 2.90117 || Valid loss = 3.19796 || BLEU = 26.46 60.4/35.1/21.3/13.6 (BP = 0.946 ratio = 0.947 hyp_len = 105901 ref_len = 111811)
+[Epoch 30] Train loss = 2.88909 || Valid loss = 3.18932 || BLEU = 26.77 60.3/35.1/21.3/13.6 (BP = 0.957 ratio = 0.958 hyp_len = 107075 ref_len = 111811) <- best
+[Epoch 31] Train loss = 2.87966 || Valid loss = 3.18307 || BLEU = 26.71 60.2/34.9/21.2/13.5 (BP = 0.958 ratio = 0.959 hyp_len = 107238 ref_len = 111811)
+[Epoch 32] Train loss = 2.86904 || Valid loss = 3.19408 || BLEU = 26.59 60.1/34.8/21.1/13.4 (BP = 0.959 ratio = 0.960 hyp_len = 107327 ref_len = 111811)
+[Epoch 33] Train loss = 2.86187 || Valid loss = 3.19298 || BLEU = 26.66 60.6/35.3/21.4/13.7 (BP = 0.947 ratio = 0.949 hyp_len = 106054 ref_len = 111811)
+[Epoch 34] Train loss = 2.85196 || Valid loss = 3.18955 || BLEU = 26.83 60.2/35.0/21.3/13.5 (BP = 0.961 ratio = 0.962 hyp_len = 107579 ref_len = 111811) <- best
+[Epoch 35] Train loss = 2.84553 || Valid loss = 3.18723 || BLEU = 26.83 60.4/35.1/21.4/13.8 (BP = 0.955 ratio = 0.956 hyp_len = 106849 ref_len = 111811) <- best
+Training end: 2022-03-30 21:55:59.379119

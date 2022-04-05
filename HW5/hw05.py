@@ -52,7 +52,7 @@ import matplotlib.pyplot as plt
 
 """# Fix random seed"""
 
-seed = 73
+seed = 1121
 random.seed(seed)
 torch.manual_seed(seed)
 if torch.cuda.is_available():
@@ -283,7 +283,7 @@ Out of vocabulary (OOV) has been a major problem in machine translation. This ca
 
 #%%
 """# Configuration for experiments"""
-pred_name = "ep35_L6_d512_f2048"
+pred_name = "ep35_L6_d512_f2048_seed1121"
 config = Namespace(
     datadir = "./DATA/data-bin/ted2020",
     logfile = f"./{pred_name}_log.txt",
