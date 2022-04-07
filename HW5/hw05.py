@@ -77,7 +77,6 @@ torch.backends.cudnn.deterministic = True
 
 ## Dataset Download
 """
-
 # data_dir = './DATA/rawdata'
 # dataset_name = 'ted2020'
 # urls = (
@@ -105,7 +104,8 @@ torch.backends.cudnn.deterministic = True
 # !mv {prefix/'test/test.zh'} {prefix/'test.raw.zh'}
 # !rm -rf {prefix/'test'}
 
-# """## Language"""
+#%%
+"""## Language"""
 
 # src_lang = 'en'
 # tgt_lang = 'zh'
@@ -994,7 +994,7 @@ None
 """
 from fairseq.data import iterators
 from torch.cuda.amp import GradScaler, autocast
-
+gnorm_list = []
 def train_one_epoch(epoch_itr, model, task, criterion, optimizer, accum_steps=1):
     itr = epoch_itr.next_epoch_itr(shuffle=True)
     itr = iterators.GroupedIterator(itr, accum_steps) # gradient accumulation: update every accum_steps samples
@@ -1033,7 +1033,9 @@ def train_one_epoch(epoch_itr, model, task, criterion, optimizer, accum_steps=1)
         scaler.unscale_(optimizer)
         optimizer.multiply_grads(1 / (sample_size or 1.0)) # (sample_size or 1.0) handles the case of a zero gradient
         gnorm = nn.utils.clip_grad_norm_(model.parameters(), config.clip_norm) # grad norm clipping prevents gradient exploding
-        
+        # print(gnorm.item())
+        gnorm_list.append(gnorm.item())
+
         scaler.step(optimizer)
         scaler.update()
         
@@ -1214,14 +1216,18 @@ def try_load_checkpoint(model, optimizer=None, name=None):
         logger.info(f"no checkpoints found at {checkpath}!")
 
 #%%
+"""
+## Load model and criterion
+"""
+model = model.to(device=device)
+criterion = criterion.to(device=device)
+
+#%%
 """# Main
 ## Training loop
 """
 with open(config.logfile,"w") as f:
 	f.write(f'Training start: {datetime.now()}\n') 
-        
-model = model.to(device=device)
-criterion = criterion.to(device=device)
 
 logger.info("task: {}".format(task.__class__.__name__))
 logger.info("encoder: {}".format(model.encoder.__class__.__name__))
@@ -1247,6 +1253,24 @@ while epoch_itr.next_epoch_idx <= config.max_epoch:
 
 with open(config.logfile,"a") as f:
 	f.write(f'Training end: {datetime.now()}\n')
+
+#%%
+"""
+# Problem 1
+"""
+# import pandas as pd
+# gnorm_df = pd.DataFrame(gnorm_list)
+# gnorm_df.to_csv('./gnorm.csv')
+
+# import pandas as pd
+# gnorm_df = pd.read_csv("./gnorm.csv", index_col=0, names=["gnorm"], header=0)
+# ax = gnorm_df.plot(figsize=(20, 5))
+# ax.set_xlim(0, len(gnorm_df))
+# ax.set_xlabel("Step")
+# ax.set_ylabel("Grad norm")
+# ax.axhline(y=1, xmin=0, xmax=len(gnorm_df), color='r', linestyle='--')
+# fig = ax.get_figure()
+# fig.savefig('gnorm.jpg')
 
 #%%
 """# Submission"""
@@ -1299,6 +1323,25 @@ def generate_prediction(model, task, split="test", outfile=config.output_name):
 
 generate_prediction(model, task)
 
+#%%
+"""
+Problem 2
+"""
+# pos_emb = model.decoder.embed_positions.weights.cpu().detach().numpy()
+# m = pos_emb.T
+# d = m.T @ m
+# norm = (m * m).sum(0, keepdims=True) ** .5
+# out = d / norm / norm.T
+
+# import numpy as np 
+# import matplotlib.pyplot as plt
+
+# plt.imshow(out, interpolation='none')
+# heatmap = plt.pcolor(out)
+# plt.colorbar(heatmap)
+# plt.savefig('cosine_similarity.jpg', dpi=100)
+
+#%%
 # raise
 
 # """# Back-translation
