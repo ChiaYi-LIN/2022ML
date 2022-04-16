@@ -19,3 +19,5 @@ Dataset/
 fairseq/
 DATA/
 checkpoints/
+# HW6
+data/
