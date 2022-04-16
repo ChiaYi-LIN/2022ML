@@ -26,9 +26,8 @@ In this section, we will prepare for the dataset and set some environment variab
 """
 
 # get dataset from huggingface hub
-# !mkdir -p ./data
-# !gdown --id 1IGrTr308mGAaCKotpkkm8wTKlWs9Jq-p --output "./data/crypko_data.zip"
-# !cd data && unzip crypko_data.zip
+# !gdown --id 1IGrTr308mGAaCKotpkkm8wTKlWs9Jq-p --output "faces.zip"
+# !unzip faces.zip
 
 #%%
 """## Other setting"""
@@ -71,6 +70,7 @@ def same_seeds(seed):
 same_seeds(2022)
 workspace_dir = '.'
 
+#%%
 """# Dataset preparation
 In this section, we prepare for the dataset for Pytorch
 
@@ -112,6 +112,7 @@ def get_dataset(root):
     dataset = CrypkoDataset(fnames, transform)
     return dataset
 
+#%%
 """## Show the image
 Show some sample in the dataset
 """
@@ -124,6 +125,7 @@ plt.figure(figsize=(10,10))
 plt.imshow(grid_img.permute(1, 2, 0))
 plt.show()
 
+#%%
 """# Model setting
 In this section, we will create models and trainer.
 
@@ -224,6 +226,7 @@ def weights_init(m):
         m.weight.data.normal_(1.0, 0.02)
         m.bias.data.fill_(0)
 
+#%%
 """## Create trainer
 In this section, we will create a trainer which contains following functions:
 1. prepare_environment: prepare the overall environment, construct the models, create directory for the log and ckpt
@@ -424,6 +427,7 @@ class TrainerGAN():
             plt.imshow(grid_img.permute(1, 2, 0))
             plt.show()
 
+#%%
 """# Train
 In this section, we will first set the config for trainer, then use it to train generator and discriminator
 
@@ -445,6 +449,7 @@ config = {
 trainer = TrainerGAN(config)
 trainer.train()
 
+#%%
 """# Inference
 In this section, we will use trainer to train model
 
@@ -452,11 +457,14 @@ In this section, we will use trainer to train model
 """
 
 # save the 1000 images into ./output folder
-trainer.inference(f'{workspace_dir}/checkpoints/2022-03-31_15-59-17_GAN/G_0.pth') # you have to modify the path when running this line
+trainer.inference(f'{workspace_dir}/checkpoints/2022-04-16_13-27-10_GAN/G_0.pth') # you have to modify the path when running this line
 
+#%%
 """## Prepare .tar file for submission"""
 
 # Commented out IPython magic to ensure Python compatibility.
-# %cd output
-!tar -zcf ../submission.tgz *.jpg
-# %cd ..
+%cd output
+!tar -zcf ../submission.tgz ./*.jpg
+%cd ..
+
+#%%
