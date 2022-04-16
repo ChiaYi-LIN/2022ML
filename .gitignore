@@ -20,4 +20,6 @@ fairseq/
 DATA/
 checkpoints/
 # HW6
-data/
+faces/
+faces.zip
+*.tgz
