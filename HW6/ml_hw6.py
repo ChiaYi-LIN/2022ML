@@ -189,6 +189,7 @@ class Discriminator(nn.Module):
 
         Remove last sigmoid layer for WGAN
         """
+        # DCGAN
         self.l1 = nn.Sequential(
             nn.Conv2d(in_dim, feature_dim, kernel_size=4, stride=2, padding=1), #(batch, 3, 32, 32)
             nn.LeakyReLU(0.2),
@@ -198,6 +199,51 @@ class Discriminator(nn.Module):
             nn.Conv2d(feature_dim * 8, 1, kernel_size=4, stride=1, padding=0),
             nn.Sigmoid() 
         )
+
+        # WGAN
+        self.l1_wgan = nn.Sequential(
+            nn.Conv2d(in_dim, feature_dim, kernel_size=4, stride=2, padding=1), #(batch, 3, 32, 32)
+            nn.LeakyReLU(0.2),
+        )
+        self.l2_wgan = nn.Sequential(
+            nn.Conv2d(feature_dim, feature_dim * 2, 4, 2, 1), #(batch, 3, 16, 16)
+            nn.BatchNorm2d(feature_dim * 2),
+            nn.LeakyReLU(0.2),
+        ) 
+        self.l3_wgan = nn.Sequential(
+            nn.Conv2d(feature_dim * 2, feature_dim * 4, 4, 2, 1), #(batch, 3, 8, 8)
+            nn.BatchNorm2d(feature_dim * 4),
+            nn.LeakyReLU(0.2),
+        ) 
+        self.l4_wgan = nn.Sequential(
+            nn.Conv2d(feature_dim * 4, feature_dim * 8, 4, 2, 1), #(batch, 3, 4, 4)
+            nn.BatchNorm2d(feature_dim * 8),
+            nn.LeakyReLU(0.2),
+        ) 
+        self.out_wgan = nn.Conv2d(feature_dim * 8, 1, kernel_size=4, stride=1, padding=0)
+
+        # WGAN-GP
+        self.l1_wgan_gp = nn.Sequential(
+            nn.Conv2d(in_dim, feature_dim, kernel_size=4, stride=2, padding=1), #(batch, 3, 32, 32)
+            nn.LeakyReLU(0.2),
+        )
+        self.l2_wgan_gp = nn.Sequential(
+            nn.Conv2d(feature_dim, feature_dim * 2, 4, 2, 1), #(batch, 3, 16, 16)
+            nn.InstanceNorm2d(feature_dim * 2),
+            nn.LeakyReLU(0.2),
+        ) 
+        self.l3_wgan_gp = nn.Sequential(
+            nn.Conv2d(feature_dim * 2, feature_dim * 4, 4, 2, 1), #(batch, 3, 8, 8)
+            nn.InstanceNorm2d(feature_dim * 4),
+            nn.LeakyReLU(0.2),
+        ) 
+        self.l4_wgan_gp = nn.Sequential(
+            nn.Conv2d(feature_dim * 4, feature_dim * 8, 4, 2, 1), #(batch, 3, 4, 4)
+            nn.InstanceNorm2d(feature_dim * 8),
+            nn.LeakyReLU(0.2),
+        ) 
+        self.out_wgan_gp = nn.Conv2d(feature_dim * 8, 1, kernel_size=4, stride=1, padding=0)
+
         self.apply(weights_init)
     def conv_bn_lrelu(self, in_dim, out_dim):
         """
@@ -213,8 +259,23 @@ class Discriminator(nn.Module):
             nn.LeakyReLU(0.2),
         )
     def forward(self, x):
-        y = self.l1(x)
-        y = y.view(-1)
+        # DCGAN
+        # y = self.l1(x)
+        # y = y.view(-1)
+
+        # WGAN
+        # out_l1 = self.l1_wgan(x)
+        # out_l2 = self.l2_wgan(out_l1)
+        # out_l3 = self.l3_wgan(out_l2)
+        # out_l4 = self.l4_wgan(out_l3)
+        # y = self.out_wgan(out_l4).view(-1)
+
+        # WGAN-GP
+        out_l1 = self.l1_wgan_gp(x)
+        out_l2 = self.l2_wgan_gp(out_l1)
+        out_l3 = self.l3_wgan_gp(out_l2)
+        out_l4 = self.l4_wgan_gp(out_l3)
+        y = self.out_wgan_gp(out_l4).view(-1)
         return y
 
 # setting for weight init function
@@ -250,8 +311,13 @@ class TrainerGAN():
         WGAN: use RMSprop optimizer
         WGAN-GP: use Adam optimizer 
         """
+        # GAN & WGAN-GP
         self.opt_D = torch.optim.Adam(self.D.parameters(), lr=self.config["lr"], betas=(0.5, 0.999))
         self.opt_G = torch.optim.Adam(self.G.parameters(), lr=self.config["lr"], betas=(0.5, 0.999))
+
+        # WGAN
+        # self.opt_D = torch.optim.RMSprop(self.D.parameters(), lr=self.config["lr"])
+        # self.opt_G = torch.optim.RMSprop(self.G.parameters(), lr=self.config["lr"])
         
         self.dataloader = None
         self.log_dir = os.path.join(self.config["workspace_dir"], 'logs')
@@ -273,11 +339,11 @@ class TrainerGAN():
         os.makedirs(self.ckpt_dir, exist_ok=True)
         
         # update dir by time
-        time = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-        self.log_dir = os.path.join(self.log_dir, time+f'_{self.config["model_type"]}')
-        self.ckpt_dir = os.path.join(self.ckpt_dir, time+f'_{self.config["model_type"]}')
-        os.makedirs(self.log_dir)
-        os.makedirs(self.ckpt_dir)
+        # time = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+        self.log_dir = os.path.join(self.log_dir, f'{self.config["model_type"]}')
+        self.ckpt_dir = os.path.join(self.ckpt_dir, f'{self.config["model_type"]}')
+        os.makedirs(self.log_dir, exist_ok=True)
+        os.makedirs(self.ckpt_dir, exist_ok=True)
         
         # create dataset by the above function
         dataset = get_dataset(os.path.join(self.config["workspace_dir"], 'faces'))
@@ -288,11 +354,32 @@ class TrainerGAN():
         self.D = self.D.cuda()
         self.G.train()
         self.D.train()
-    def gp(self):
+    def gp(self, real_samples, fake_samples):
         """
         Implement gradient penalty function
         """
-        pass
+        # Random weight term for interpolation between real and fake samples
+        alpha = torch.Tensor(np.random.random((real_samples.size(0), 1, 1, 1))).cuda()
+        # print(f'alpha.shape = {alpha.shape}')
+        # Get random interpolation between real and fake samples
+        interpolates = (alpha * real_samples + ((1 - alpha) * fake_samples)).requires_grad_(True)
+        # print(f'interpolates.shape = {interpolates.shape}')
+        d_interpolates = self.D(interpolates)
+        # print(f'd_interpolates.shape = {d_interpolates.shape}')
+        fake = Variable(torch.Tensor(real_samples.shape[0]).fill_(1.0), requires_grad=False).cuda()
+        # print(f'fake.shape = {fake.shape}')
+        # Get gradient w.r.t. interpolates
+        gradients = torch.autograd.grad(
+            outputs=d_interpolates,
+            inputs=interpolates,
+            grad_outputs=fake,
+            create_graph=True,
+            retain_graph=True,
+            only_inputs=True,
+        )[0]
+        gradients = gradients.view(gradients.size(0), -1)
+        gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean()
+        return gradient_penalty
         
     def train(self):
         """
@@ -333,9 +420,17 @@ class TrainerGAN():
                     loss_D = -torch.mean(r_logit) + torch.mean(f_logit) + gradient_penalty
                 """
                 # Loss for discriminator
-                r_loss = self.loss(r_logit, r_label)
-                f_loss = self.loss(f_logit, f_label)
-                loss_D = (r_loss + f_loss) / 2
+                # DCGAN
+                # r_loss = self.loss(r_logit, r_label)
+                # f_loss = self.loss(f_logit, f_label)
+                # loss_D = (r_loss + f_loss) / 2
+
+                # WGAN
+                # loss_D = -torch.mean(r_logit) + torch.mean(f_logit)
+
+                # WGAN-GP
+                gradient_penalty = self.gp(r_imgs, f_imgs)
+                loss_D = -torch.mean(r_logit) + torch.mean(f_logit) + config["lambda_gp"] * gradient_penalty
 
                 # Discriminator backwarding
                 self.D.zero_grad()
@@ -347,6 +442,8 @@ class TrainerGAN():
                 
                 WGAN: below code
                 """
+                # WGAN
+                # DCGAN & WGAN-GP don't do this
                 # for p in self.D.parameters():
                 #     p.data.clamp_(-self.config["clip_value"], self.config["clip_value"])
 
@@ -371,8 +468,12 @@ class TrainerGAN():
                     WGAN: loss_G = -torch.mean(self.D(f_imgs))
                     WGAN-GP: loss_G = -torch.mean(self.D(f_imgs))
                     """
+                    # DCGAN
                     # Loss for the generator.
-                    loss_G = self.loss(f_logit, r_label)
+                    # loss_G = self.loss(f_logit, r_label)
+
+                    # WGAN & WGAN-GP
+                    loss_G = -torch.mean(self.D(f_imgs))
 
                     # Generator backwarding
                     self.G.zero_grad()
@@ -435,15 +536,18 @@ In this section, we will first set the config for trainer, then use it to train 
 """
 
 config = {
-    "model_type": "GAN",
+    "model_type": "WGAN-GP",
     "batch_size": 64,
     "lr": 1e-4,
     "n_epoch": 1,
     "n_critic": 1,
     "z_dim": 100,
     "workspace_dir": workspace_dir, # define in the environment setting
+    "clip_value": 1.0,
+    "lambda_gp": 10,
 }
 
+#%%
 """## Start to train"""
 
 trainer = TrainerGAN(config)
@@ -457,14 +561,17 @@ In this section, we will use trainer to train model
 """
 
 # save the 1000 images into ./output folder
-trainer.inference(f'{workspace_dir}/checkpoints/2022-04-16_13-27-10_GAN/G_0.pth') # you have to modify the path when running this line
+# trainer.inference(f'{workspace_dir}/checkpoints/{config["model_type"]}/G_0.pth') # you have to modify the path when running this line
+
+#%%
+# config["model_type"]
 
 #%%
 """## Prepare .tar file for submission"""
 
 # Commented out IPython magic to ensure Python compatibility.
-%cd output
-!tar -zcf ../submission.tgz ./*.jpg
-%cd ..
+# %cd output
+# !tar -zcf ../WGAN-GP.tgz ./*.jpg
+# %cd ..
 
 #%%
