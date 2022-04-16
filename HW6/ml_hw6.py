@@ -1,3 +1,4 @@
+#%%
 # -*- coding: utf-8 -*-
 """ML_HW6.ipynb
 
@@ -25,12 +26,11 @@ In this section, we will prepare for the dataset and set some environment variab
 """
 
 # get dataset from huggingface hub
-!curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | bash
-!apt-get install git-lfs
-!git lfs install
-!git clone https://huggingface.co/datasets/LeoFeng/MLHW_6
-!unzip ./MLHW_6/faces.zip -d .
+# !mkdir -p ./data
+# !gdown --id 1IGrTr308mGAaCKotpkkm8wTKlWs9Jq-p --output "./data/crypko_data.zip"
+# !cd data && unzip crypko_data.zip
 
+#%%
 """## Other setting"""
 
 # import module
