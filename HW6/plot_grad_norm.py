@@ -384,12 +384,12 @@ class TrainerGAN_WGAN():
         WGAN-GP: use Adam optimizer 
         """
         # GAN & WGAN-GP
-        self.opt_D = torch.optim.Adam(self.D.parameters(), lr=self.config["lr"], betas=(0.5, 0.999))
-        self.opt_G = torch.optim.Adam(self.G.parameters(), lr=self.config["lr"], betas=(0.5, 0.999))
+        # self.opt_D = torch.optim.Adam(self.D.parameters(), lr=self.config["lr"], betas=(0.5, 0.999))
+        # self.opt_G = torch.optim.Adam(self.G.parameters(), lr=self.config["lr"], betas=(0.5, 0.999))
 
         # WGAN
-        # self.opt_D = torch.optim.RMSprop(self.D.parameters(), lr=self.config["lr"])
-        # self.opt_G = torch.optim.RMSprop(self.G.parameters(), lr=self.config["lr"])
+        self.opt_D = torch.optim.RMSprop(self.D.parameters(), lr=self.config["lr"])
+        self.opt_G = torch.optim.RMSprop(self.G.parameters(), lr=self.config["lr"])
         
         self.dataloader = None
         self.log_dir = os.path.join(self.config["workspace_dir"], 'logs')
@@ -498,11 +498,11 @@ class TrainerGAN_WGAN():
                 # loss_D = (r_loss + f_loss) / 2
 
                 # WGAN
-                # loss_D = -torch.mean(r_logit) + torch.mean(f_logit)
+                loss_D = -torch.mean(r_logit) + torch.mean(f_logit)
 
                 # WGAN-GP
-                gradient_penalty = self.gp(r_imgs, f_imgs)
-                loss_D = -torch.mean(r_logit) + torch.mean(f_logit) + config["lambda_gp"] * gradient_penalty
+                # gradient_penalty = self.gp(r_imgs, f_imgs)
+                # loss_D = -torch.mean(r_logit) + torch.mean(f_logit) + config_WGAN["lambda_gp"] * gradient_penalty
 
                 # Discriminator backwarding
                 self.D.zero_grad()
@@ -516,8 +516,8 @@ class TrainerGAN_WGAN():
                 """
                 # WGAN
                 # DCGAN & WGAN-GP don't do this
-                # for p in self.D.parameters():
-                #     p.data.clamp_(-self.config["clip_value"], self.config["clip_value"])
+                for p in self.D.parameters():
+                    p.data.clamp_(-self.config["clip_value"], self.config["clip_value"])
 
 
 
@@ -735,7 +735,7 @@ class TrainerGAN_WGAN_GP():
 
                 # WGAN-GP
                 gradient_penalty = self.gp(r_imgs, f_imgs)
-                loss_D = -torch.mean(r_logit) + torch.mean(f_logit) + config["lambda_gp"] * gradient_penalty
+                loss_D = -torch.mean(r_logit) + torch.mean(f_logit) + config_WGAN_GP["lambda_gp"] * gradient_penalty
 
                 # Discriminator backwarding
                 self.D.zero_grad()
@@ -838,7 +838,7 @@ config_WGAN = {
     "model_type": "WGAN",
     "batch_size": 64,
     "lr": 1e-4,
-    "n_epoch": 1,
+    "n_epoch": 3,
     "n_critic": 1,
     "z_dim": 100,
     "workspace_dir": workspace_dir, # define in the environment setting
@@ -850,7 +850,7 @@ config_WGAN_GP = {
     "model_type": "WGAN-GP",
     "batch_size": 64,
     "lr": 1e-4,
-    "n_epoch": 1,
+    "n_epoch": 3,
     "n_critic": 1,
     "z_dim": 100,
     "workspace_dir": workspace_dir, # define in the environment setting
@@ -859,5 +859,93 @@ config_WGAN_GP = {
 }
 
 #%%
-"""## Start to train"""
 trainer_WGAN = TrainerGAN_WGAN(config_WGAN)
+
+#%%
+trainer_WGAN.train()
+
+#%%
+trainer_WGAN_GP = TrainerGAN_WGAN_GP(config_WGAN_GP)
+
+#%%
+trainer_WGAN_GP.train()
+
+#%%
+for i, data in enumerate(trainer_WGAN.dataloader):
+    imgs = data.cuda()
+    bs = imgs.size(0)
+
+    z = Variable(torch.randn(bs, trainer_WGAN.config["z_dim"])).cuda()
+    r_imgs = Variable(imgs).cuda()
+    f_imgs = trainer_WGAN.G(z)
+
+    r_logit = trainer_WGAN.D(r_imgs)
+    f_logit = trainer_WGAN.D(f_imgs)
+
+    loss_D = -torch.mean(r_logit) + torch.mean(f_logit)
+
+    trainer_WGAN.D.zero_grad()
+    loss_D.backward()
+
+    grad_norm_WGAN = []
+    for layer in [trainer_WGAN.D.l4_wgan[0], trainer_WGAN.D.l3_wgan[0], trainer_WGAN.D.l2_wgan[0], trainer_WGAN.D.l1_wgan[0]]:
+        total_norm = 0
+        for p in layer.parameters():
+            param_norm = p.grad.data.norm(2)
+            total_norm += param_norm.item() ** 2
+        total_norm = total_norm ** (1. / 2)
+        grad_norm_WGAN.append(np.log(total_norm))
+    
+    break
+
+
+#%%
+grad_norm_WGAN
+
+#%%
+for i, data in enumerate(trainer_WGAN_GP.dataloader):
+    imgs = data.cuda()
+    bs = imgs.size(0)
+
+    z = Variable(torch.randn(bs, trainer_WGAN_GP.config["z_dim"])).cuda()
+    r_imgs = Variable(imgs).cuda()
+    f_imgs = trainer_WGAN_GP.G(z)
+
+    r_logit = trainer_WGAN_GP.D(r_imgs)
+    f_logit = trainer_WGAN_GP.D(f_imgs)
+
+    gradient_penalty = trainer_WGAN_GP.gp(r_imgs, f_imgs)
+    loss_D = -torch.mean(r_logit) + torch.mean(f_logit) + config_WGAN_GP["lambda_gp"] * gradient_penalty
+
+    trainer_WGAN_GP.D.zero_grad()
+    loss_D.backward()
+
+    grad_norm_WGAN_GP = []
+    for layer in [trainer_WGAN_GP.D.l4_wgan_gp[0], trainer_WGAN_GP.D.l3_wgan_gp[0], trainer_WGAN_GP.D.l2_wgan_gp[0], trainer_WGAN_GP.D.l1_wgan_gp[0]]:
+        total_norm = 0
+        for p in layer.parameters():
+            param_norm = p.grad.data.norm(2)
+            total_norm += param_norm.item() ** 2
+        total_norm = total_norm ** (1. / 2)
+        grad_norm_WGAN_GP.append(np.log(total_norm))
+    
+    break
+
+#%%
+grad_norm_WGAN_GP
+
+#%%
+import matplotlib.pyplot as plt
+plt.plot([4, 3, 2, 1], grad_norm_WGAN, label = f"WGAN c={config_WGAN['clip_value']}")
+plt.plot([4, 3, 2, 1], grad_norm_WGAN_GP, label = "WGAN-GP")
+
+# plt.xlim(4, 1)
+plt.ylim(-20, 20)
+plt.xlabel('Discriminator Layer')
+plt.ylabel('Gradient Norm (log scale)')
+plt.title('Gradient Norm of Discriminator Layers of WGAN and WGAN-GP')
+plt.legend()
+plt.savefig('./output.jpg')
+# plt.show()
+
+#%%
