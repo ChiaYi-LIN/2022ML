@@ -23,3 +23,12 @@ checkpoints/
 faces/
 faces.zip
 *.tgz
+logs/
+models/
+output/
+results/
+stylegan_output/
+# HW7
+HW7/model/
+__pycache__/
+hw7_data.zip
