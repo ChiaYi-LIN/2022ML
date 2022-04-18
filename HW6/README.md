@@ -12,3 +12,6 @@ cd ..
 ```
 
 # Plot
+```shell
+python plot_grad_norm.py
+```
