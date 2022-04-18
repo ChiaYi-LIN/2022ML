@@ -24,7 +24,7 @@ from transformers import (
     TrainingArguments, 
 )
 
-output_name = "roberta_wwm_stride128"
+output_name = "roberta_wwm"
 # bert-base-chinese
 # hfl/chinese-roberta-wwm-ext
 tokenizer_checkpoint = "hfl/chinese-roberta-wwm-ext"
