@@ -32,3 +32,4 @@ stylegan_output/
 HW7/model/
 __pycache__/
 hw7_data.zip
+wandb/
