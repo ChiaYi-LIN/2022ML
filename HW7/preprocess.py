@@ -52,11 +52,7 @@ all = pd.concat([unfold_train_data, unfold_valid_data], ignore_index=True)
 all['id'] = all.index
 
 #%%
-all_json = {"data" : all.to_dict(orient="records")}
-test_json = {"data" : unfold_test_data.to_dict(orient="records")}
-
-#%%
-write_json("./data/all.json", all_json)
-write_json("./data/test.json", test_json)
+write_json("./data/all.json", {"data" : all.to_dict(orient="records")})
+write_json("./data/test.json", {"data" : unfold_test_data.to_dict(orient="records")})
 
 #%%
