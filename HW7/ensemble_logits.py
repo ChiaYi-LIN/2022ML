@@ -19,9 +19,10 @@ from transformers import (
 # hfl/chinese-roberta-wwm-ext-large
 # hfl/chinese-macbert-base
 # hfl/chinese-macbert-large
+model_checkpoints = ['./model/roberta_wwm_seed0', './model/roberta_wwm_seed326', './model/roberta_wwm_seed1121', './model/roberta_wwm_seed3261121', './model/roberta_wwm_seed1121326', './model/roberta_wwm_seed3', './model/roberta_wwm_seed6']
 config = {
-    "output_name" : "ensemble_logits",
-    "tokenizer_checkpoint" : "hfl/chinese-macbert-base",
+    "output_name" : "ensemble_logits_7",
+    "tokenizer_checkpoint" : "hfl/chinese-roberta-wwm-ext",
     "batch_size" : 256,
     "max_length" : 384,
     "stride" : 128,
@@ -191,7 +192,6 @@ def get_logits(model_checkpoint):
 
 #%%
 """## Ensemble Logits"""
-model_checkpoints = ['./model/roberta_wwm_seed0', './model/roberta_wwm_seed326', './model/roberta_wwm_seed1121', './model/roberta_wwm_seed3261121', './model/roberta_wwm_seed1121326']
 all_logits = []
 for cp in model_checkpoints:
     logits = get_logits(cp)
