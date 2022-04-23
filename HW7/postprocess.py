@@ -3,8 +3,8 @@ import json
 import csv
 
 #%%
-result_dir = "roberta_runqa"
-output_name = "roberta_runqa"
+result_dir = "macbert_runqa"
+output_name = "macbert_runqa_5000step"
 
 #%%
 def read_json(filename):
