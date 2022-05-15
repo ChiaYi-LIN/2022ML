@@ -33,3 +33,9 @@ HW7/model/
 __pycache__/
 hw7_data.zip
 wandb/
+# HW9
+HW9/hw9_bert
+HW9/food.zip
+HW9/hw9_bert.zip
+HW9/checkpoint.pth
+HW9/taipei_sans_tc_beta.ttf
