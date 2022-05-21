@@ -283,6 +283,7 @@ loss_fn = nn.CrossEntropyLoss()
 benign_acc, benign_loss = epoch_benign(model, adv_loader, loss_fn)
 print(f'benign_acc = {benign_acc:.5f}, benign_loss = {benign_loss:.5f}')
 
+#%%
 """## FGSM"""
 
 adv_examples, fgsm_acc, fgsm_loss = gen_adv_examples(model, adv_loader, fgsm, loss_fn)
@@ -369,9 +370,9 @@ create_dir(root, 'ensemble_11', adv_examples, adv_names)
 # raise
 
 #%%
-%cd ensemble_11
-!tar zcvf ../ensemble_11.tgz *
-%cd ..
+# %cd ensemble_11
+# !tar zcvf ../ensemble_11.tgz *
+# %cd ..
 
 #%%
 """## Visualization"""
@@ -435,6 +436,7 @@ plt.imshow(np.array(adv_im))
 plt.tight_layout()
 plt.show()
 
+#%%
 """## Passive Defense - JPEG compression
 JPEG compression by imgaug package, compression rate set to 70
 
@@ -449,7 +451,8 @@ x = x.permute(1, 2, 0).numpy()
 x = x.astype(np.uint8)
 
 # TODO: use "imgaug" package to perform JPEG compression (compression rate = 70)
-# compressed_x =  ... x .. 
+aug = iaa.JpegCompression(compression=70, seed=0)
+compressed_x = aug.augment_image(x)
 
 logit = model(transform(compressed_x).unsqueeze(0).to(device))[0]
 predict = logit.argmax(-1).item()
@@ -461,3 +464,5 @@ plt.axis('off')
 plt.imshow(compressed_x)
 plt.tight_layout()
 plt.show()
+
+#%%
