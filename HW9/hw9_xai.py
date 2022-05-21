@@ -386,6 +386,7 @@ We can modify the model definition, make the forward function not only return lo
 
 model
 
+#%%
 def normalize(image):
   return (image - image.min()) / (image.max() - image.min())
 
