@@ -1,3 +1,4 @@
+#%%
 # -*- coding: utf-8 -*-
 """ML2022_hw10.ipynb
 
@@ -18,18 +19,21 @@ We make use of [pytorchcv](https://pypi.org/project/pytorchcv/) to obtain CIFAR-
 """
 
 # set up environment
-!pip install pytorchcv
-!pip install imgaug
+# !pip install pytorchcv
+# !pip install imgaug
 
 # download
-!wget https://github.com/DanielLin94144/ML-attack-dataset/files/8167812/data.zip
+# !wget https://github.com/DanielLin94144/ML-attack-dataset/files/8167812/data.zip
 
 # unzip
-!unzip ./data.zip
-!rm ./data.zip
+# !unzip ./data.zip
+# !rm ./data.zip
 
+#%%
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
+from tqdm import tqdm
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 batch_size = 8
@@ -61,6 +65,7 @@ root = './data' # directory for storing benign images
 # benign images: images which do not contain adversarial perturbations
 # adversarial images: images which include adversarial perturbations
 
+#%%
 """## Data
 
 Construct dataset and dataloader from root directory. Note that we store the filename of each image for future usage.
@@ -112,6 +117,7 @@ adv_loader = DataLoader(adv_set, batch_size=batch_size, shuffle=False)
 
 print(f'number of images = {adv_set.__len__()}')
 
+#%%
 """## Utils -- Benign Images Evaluation"""
 
 # to evaluate the performance of model on benign images
@@ -141,7 +147,9 @@ def fgsm(model, x, y, loss_fn, epsilon=epsilon):
 
 # alpha and num_iter can be decided by yourself
 alpha = 0.8/255/std
-def ifgsm(model, x, y, loss_fn, epsilon=epsilon, alpha=alpha, num_iter=20):
+num_iter = 50
+decay = 0.9
+def ifgsm(model, x, y, loss_fn, epsilon=epsilon, alpha=alpha, num_iter=num_iter):
     x_adv = x
     # write a loop of num_iter to represent the iterative times
     for i in range(num_iter):
@@ -157,7 +165,7 @@ def ifgsm(model, x, y, loss_fn, epsilon=epsilon, alpha=alpha, num_iter=20):
         x_adv = torch.max(torch.min(x_adv, x+epsilon), x-epsilon) # clip new x_adv back to [x-epsilon, x+epsilon]
     return x_adv
 
-def mifgsm(model, x, y, loss_fn, epsilon=epsilon, alpha=alpha, num_iter=20, decay=1.0):
+def mifgsm(model, x, y, loss_fn, epsilon=epsilon, alpha=alpha, num_iter=num_iter, decay=decay):
     x_adv = x
     # initialze momentum tensor
     momentum = torch.zeros_like(x).detach().to(device)
@@ -168,7 +176,53 @@ def mifgsm(model, x, y, loss_fn, epsilon=epsilon, alpha=alpha, num_iter=20, deca
         loss = loss_fn(model(x_adv), y) # calculate loss
         loss.backward() # calculate gradient
         # TODO: Momentum calculation
-        # grad = .....
+        grad = x_adv.grad.detach()
+        grad = grad / torch.mean(torch.abs(grad), dim=(1,2,3), keepdim=True)
+        grad = grad + momentum * decay
+        momentum = grad
+
+        x_adv = x_adv + alpha * grad.sign()
+        x_adv = torch.max(torch.min(x_adv, x+epsilon), x-epsilon) # clip new x_adv back to [x-epsilon, x+epsilon]
+    return x_adv
+
+def dim_mifgsm(model, x, y, loss_fn, epsilon=epsilon, alpha=alpha, num_iter=num_iter, decay=decay):
+    
+    def input_diversity(x, resize_rate=0.9, diversity_prob=0.5):
+        img_size = x.shape[-1]
+        img_resize = int(img_size * resize_rate)
+
+        if resize_rate < 1:
+            img_size = img_resize
+            img_resize = x.shape[-1]
+
+        rnd = torch.randint(low=img_size, high=img_resize, size=(1,), dtype=torch.int32)
+        rescaled = F.interpolate(x, size=[rnd, rnd], mode='bilinear', align_corners=False)
+        h_rem = img_resize - rnd
+        w_rem = img_resize - rnd
+        pad_top = torch.randint(low=0, high=h_rem.item(), size=(1,), dtype=torch.int32)
+        pad_bottom = h_rem - pad_top
+        pad_left = torch.randint(low=0, high=w_rem.item(), size=(1,), dtype=torch.int32)
+        pad_right = w_rem - pad_left
+
+        padded = F.pad(rescaled, [pad_left.item(), pad_right.item(), pad_top.item(), pad_bottom.item()], value=0)
+
+        return padded if torch.rand(1) < diversity_prob else x
+    
+    x_adv = x
+    # initialze momentum tensor
+    momentum = torch.zeros_like(x).detach().to(device)
+    # write a loop of num_iter to represent the iterative times
+    for i in range(num_iter):
+        x_adv = x_adv.detach().clone()
+        x_adv.requires_grad = True # need to obtain gradient of x_adv, thus set required grad
+        loss = loss_fn(model(input_diversity(x_adv)), y) # calculate loss
+        loss.backward() # calculate gradient
+        # TODO: Momentum calculation
+        grad = x_adv.grad.detach()
+        grad = grad / torch.mean(torch.abs(grad), dim=(1,2,3), keepdim=True)
+        grad = grad + momentum * decay
+        momentum = grad
+
         x_adv = x_adv + alpha * grad.sign()
         x_adv = torch.max(torch.min(x_adv, x+epsilon), x-epsilon) # clip new x_adv back to [x-epsilon, x+epsilon]
     return x_adv
@@ -192,7 +246,7 @@ def gen_adv_examples(model, loader, attack, loss_fn):
     model.eval()
     adv_names = []
     train_acc, train_loss = 0.0, 0.0
-    for i, (x, y) in enumerate(loader):
+    for i, (x, y) in enumerate(tqdm(loader)):
         x, y = x.to(device), y.to(device)
         x_adv = attack(model, x, y, loss_fn) # obtain adversarial examples
         yp = model(x_adv)
@@ -215,6 +269,7 @@ def create_dir(data_dir, adv_dir, adv_examples, adv_names):
         im = Image.fromarray(example.astype(np.uint8)) # image pixel value should be unsigned int
         im.save(os.path.join(adv_dir, name))
 
+#%%
 """## Model / Loss Function
 
 Model list is available [here](https://github.com/osmr/imgclsmob/blob/master/pytorch/pytorchcv/model_provider.py). Please select models which has _cifar10 suffix. Some of the models cannot be accessed/loaded. You can safely skip them since TA's model will not use those kinds of models.
@@ -242,19 +297,33 @@ print(f'ifgsm_acc = {ifgsm_acc:.5f}, ifgsm_loss = {ifgsm_loss:.5f}')
 
 create_dir(root, 'ifgsm', adv_examples, adv_names)
 
+"""## MI-FGSM"""
+adv_examples, mifgsm_acc, mifgsm_loss = gen_adv_examples(model, adv_loader, mifgsm, loss_fn)
+print(f'mifgsm_acc = {mifgsm_acc:.5f}, mifgsm_loss = {mifgsm_loss:.5f}')
+
+create_dir(root, 'mifgsm', adv_examples, adv_names)
+
+"""## DIM-MI-FGSM"""
+adv_examples, dim_mifgsm_acc, dim_mifgsm_loss = gen_adv_examples(model, adv_loader, dim_mifgsm, loss_fn)
+print(f'dim_mifgsm_acc = {dim_mifgsm_acc:.5f}, dim_mifgsm_loss = {dim_mifgsm_loss:.5f}')
+
+create_dir(root, 'dim_mifgsm', adv_examples, adv_names)
+
+#%%
 """## Compress the images
 * Submit the .tgz file to [JudgeBoi](https://ml.ee.ntu.edu.tw/hw10/)
 """
 
 # Commented out IPython magic to ensure Python compatibility.
 # %cd fgsm
-!tar zcvf ../fgsm.tgz *
+# !tar zcvf ../fgsm.tgz *
 # %cd ..
 
 # %cd ifgsm
-!tar zcvf ../ifgsm.tgz *
+# !tar zcvf ../ifgsm.tgz *
 # %cd ..
 
+#%%
 """## Example of Ensemble Attack
 * Ensemble multiple models as your proxy model to increase the black-box transferability ([paper](https://arxiv.org/abs/1611.02770))
 """
@@ -267,18 +336,44 @@ class ensembleNet(nn.Module):
     def forward(self, x):
         for i, m in enumerate(self.models):
         # TODO: sum up logits from multiple models  
-        # return ensemble_logits
+            if i == 0:
+                ensemble_logits = m(x)
+            else:
+                ensemble_logits += m(x)
+        return ensemble_logits
 
 """* Construct your ensemble model"""
 
 model_names = [
     'nin_cifar10',
     'resnet20_cifar10',
-    'preresnet20_cifar10'
+    'preresnet20_cifar10',
+    'seresnet20_cifar10',
+    'sepreresnet20_cifar10',
+    'pyramidnet110_a48_cifar10',
+    'densenet40_k12_cifar10',
+    'xdensenet40_2_k24_bc_cifar10',
+    'wrn16_10_cifar10',
+    'wrn20_10_1bit_cifar10',
+    'ror3_56_cifar10',
 ]
 ensemble_model = ensembleNet(model_names).to(device)
 ensemble_model.eval()
 
+adv_examples, ensemble_acc, ensemble_loss = gen_adv_examples(ensemble_model, adv_loader, dim_mifgsm, loss_fn)
+print(f'ensemble_acc = {ensemble_acc:.5f}, ensemble_loss = {ensemble_loss:.5f}')
+
+create_dir(root, 'ensemble_11', adv_examples, adv_names)
+
+#%%
+# raise
+
+#%%
+%cd ensemble_11
+!tar zcvf ../ensemble_11.tgz *
+%cd ..
+
+#%%
 """## Visualization"""
 
 import matplotlib.pyplot as plt
@@ -312,6 +407,7 @@ for i, cls_name in enumerate(classes):
 plt.tight_layout()
 plt.show()
 
+#%%
 """## Report Question
 * Make sure you follow below setup: the source model is "resnet110_cifar10", applying the vanilla fgsm attack on `dog2.png`. You can find the perturbed image in `fgsm/dog2.png`.
 """
