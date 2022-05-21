@@ -39,3 +39,10 @@ HW9/food.zip
 HW9/hw9_bert.zip
 HW9/checkpoint.pth
 HW9/taipei_sans_tc_beta.ttf
+# HW10
+fgsm/
+ifgsm/
+mifgsm/
+dim_mifgsm/
+ensemble/
+ensemble_11/
