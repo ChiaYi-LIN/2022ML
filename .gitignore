@@ -46,3 +46,8 @@ mifgsm/
 dim_mifgsm/
 ensemble/
 ensemble_11/
+# HW11
+real_or_drawing.zip
+real_or_drawing/
+extractor_model.bin
+predictor_model.bin
