@@ -1,3 +1,4 @@
+#%%
 # -*- coding: utf-8 -*-
 """hw11_domain_adaptation (en).ipynb
 
@@ -59,15 +60,20 @@ Note that: **The source and target data are all balanced data, you can make use 
 """
 
 # Download dataset
-!wget "https://github.com/redxouls/ml2020spring-hw11-dataset/releases/download/v1.0.0/real_or_drawing.zip" -O real_or_drawing.zip
+# !wget "https://github.com/redxouls/ml2020spring-hw11-dataset/releases/download/v1.0.0/real_or_drawing.zip" -O real_or_drawing.zip
 
 # Download from mirrored dataset link
 # !wget "https://github.com/redxouls/ml2020spring-hw11-dataset/releases/download/v1.0.1/real_or_drawing.zip" -O real_or_drawing.zip
 # !wget "https://github.com/redxouls/ml2020spring-hw11-dataset/releases/download/v1.0.2/real_or_drawing.zip" -O real_or_drawing.zip
 
 # Unzip the files
-!unzip real_or_drawing.zip
+# !unzip real_or_drawing.zip
 
+#%%
+output_filename = 'DaNN_submission.csv'
+num_epochs = 500
+
+#%%
 import matplotlib.pyplot as plt
 
 def no_axis_show(img, title='', cmap=None):
@@ -89,6 +95,7 @@ for i in range(10):
   plt.subplot(1, 10, i+1)
   fig = no_axis_show(plt.imread(f'real_or_drawing/test_data/0/' + str(i).rjust(5, '0') + '.bmp'))
 
+#%%
 """# Special Domain Knowledge
 
 When we graffiti, we usually draw the outline only, therefore we can perform edge detection processing on the source data to make it more similar to the target data.
@@ -120,10 +127,6 @@ gray_img = cv2.cvtColor(original_img, cv2.COLOR_RGB2GRAY)
 plt.subplot(1, 5, 2)
 no_axis_show(gray_img, title='gray scale', cmap='gray')
 
-gray_img = cv2.cvtColor(original_img, cv2.COLOR_RGB2GRAY)
-plt.subplot(1, 5, 2)
-no_axis_show(gray_img, title='gray scale', cmap='gray')
-
 canny_50100 = cv2.Canny(gray_img, 50, 100)
 plt.subplot(1, 5, 3)
 no_axis_show(canny_50100, title='Canny(50, 100)', cmap='gray')
@@ -136,6 +139,7 @@ canny_250300 = cv2.Canny(gray_img, 250, 300)
 plt.subplot(1, 5, 5)
 no_axis_show(canny_250300, title='Canny(250, 300)', cmap='gray')
 
+#%%
 """# Data Process
  
  
@@ -147,6 +151,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Function
+from tqdm import tqdm
  
 import torch.optim as optim
 import torchvision.transforms as transforms
@@ -191,6 +196,7 @@ source_dataloader = DataLoader(source_dataset, batch_size=32, shuffle=True)
 target_dataloader = DataLoader(target_dataset, batch_size=32, shuffle=True)
 test_dataloader = DataLoader(target_dataset, batch_size=128, shuffle=False)
 
+#%%
 """# Model
 
 Feature Extractor: Classic VGG-like architecture
@@ -298,6 +304,7 @@ optimizer_F = optim.Adam(feature_extractor.parameters())
 optimizer_C = optim.Adam(label_predictor.parameters())
 optimizer_D = optim.Adam(domain_classifier.parameters())
 
+#%%
 """# Start Training
 
 
@@ -369,7 +376,7 @@ def train_epoch(source_dataloader, target_dataloader, lamb):
     return running_D_loss / (i+1), running_F_loss / (i+1), total_hit / total_num
 
 # train 200 epochs
-for epoch in range(200):
+for epoch in range(num_epochs):
     train_D_loss, train_F_loss, train_acc = train_epoch(source_dataloader, target_dataloader, lamb=0.1)
 
     torch.save(feature_extractor.state_dict(), f'extractor_model.bin')
@@ -377,6 +384,7 @@ for epoch in range(200):
 
     print('epoch {:>3d}: train D loss: {:6.4f}, train F loss: {:6.4f}, acc {:6.4f}'.format(epoch, train_D_loss, train_F_loss, train_acc))
 
+#%%
 """# Inference
 
 We use pandas to generate our csv file.
@@ -400,8 +408,9 @@ result = np.concatenate(result)
 
 # Generate your submission
 df = pd.DataFrame({'id': np.arange(0,len(result)), 'label': result})
-df.to_csv('DaNN_submission.csv',index=False)
+df.to_csv(output_filename,index=False)
 
+#%%
 """# Visualization
 We use t-SNE plot to observe the distribution of extracted features.
 """
