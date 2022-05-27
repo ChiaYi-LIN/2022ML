@@ -70,8 +70,13 @@ Note that: **The source and target data are all balanced data, you can make use 
 # !unzip real_or_drawing.zip
 
 #%%
-output_filename = 'DaNN_submission.csv'
-num_epochs = 500
+config = {
+    'output_filename' : 'DaNN_submission.csv',
+    'num_epoch' : 2000,
+    'seed' : 0,
+    'train_batch_size' : 2048,
+    'eval_batch_size' : 2048,
+}
 
 #%%
 import matplotlib.pyplot as plt
@@ -146,6 +151,7 @@ no_axis_show(canny_250300, title='Canny(250, 300)', cmap='gray')
 The data is suitible for `torchvision.ImageFolder`. You can create a dataset with `torchvision.ImageFolder`. Details for image augmentation please refer to the comments in the following codes.
 """
 
+import random
 import numpy as np
 import torch
 import torch.nn as nn
@@ -158,6 +164,18 @@ import torchvision.transforms as transforms
 from torchvision.datasets import ImageFolder
 from torch.utils.data import DataLoader
  
+def same_seeds(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.benchmark = False
+    torch.backends.cudnn.deterministic = True
+
+same_seeds(config['seed'])
+
 source_transform = transforms.Compose([
     # Turn RGB to grayscale. (Bacause Canny do not support RGB images.)
     transforms.Grayscale(),
@@ -192,9 +210,9 @@ target_transform = transforms.Compose([
 source_dataset = ImageFolder('real_or_drawing/train_data', transform=source_transform)
 target_dataset = ImageFolder('real_or_drawing/test_data', transform=target_transform)
  
-source_dataloader = DataLoader(source_dataset, batch_size=32, shuffle=True)
-target_dataloader = DataLoader(target_dataset, batch_size=32, shuffle=True)
-test_dataloader = DataLoader(target_dataset, batch_size=128, shuffle=False)
+source_dataloader = DataLoader(source_dataset, batch_size=config['train_batch_size'], shuffle=True)
+target_dataloader = DataLoader(target_dataset, batch_size=config['train_batch_size'], shuffle=True)
+test_dataloader = DataLoader(target_dataset, batch_size=config['eval_batch_size'], shuffle=False)
 
 #%%
 """# Model
@@ -317,6 +335,9 @@ Feature Extractor, Label Predictor, and Domain Classifier are all trained at the
 * Lambda, which controls the domain adversarial loss, is adaptive in the original paper. You can refer to [the original work](https://arxiv.org/pdf/1505.07818.pdf) . Here lambda is set to 0.1.
 * We do not have the label to target data, you can only evaluate your model by uploading your result to kaggle.:)
 """
+def adaptive_lamb(epoch, num_epoch):
+    p = epoch / num_epoch
+    return 2. / (1 + np.exp(-10 * p)) - 1
 
 def train_epoch(source_dataloader, target_dataloader, lamb):
     '''
@@ -371,19 +392,35 @@ def train_epoch(source_dataloader, target_dataloader, lamb):
 
         total_hit += torch.sum(torch.argmax(class_logits, dim=1) == source_label).item()
         total_num += source_data.shape[0]
-        print(i, end='\r')
+        # print(i, end='\r')
 
     return running_D_loss / (i+1), running_F_loss / (i+1), total_hit / total_num
 
 # train 200 epochs
-for epoch in range(num_epochs):
-    train_D_loss, train_F_loss, train_acc = train_epoch(source_dataloader, target_dataloader, lamb=0.1)
+with open('log.txt', 'w') as f:
+    f.write('')
+
+pbar = tqdm(range(config['num_epoch']))
+for i in pbar:
+    epoch = i + 1
+    pbar.set_description(f"Epoch {epoch}")
+
+    lamb = adaptive_lamb(epoch, config['num_epoch'])
+    train_D_loss, train_F_loss, train_acc = train_epoch(source_dataloader, target_dataloader, lamb=lamb)
 
     torch.save(feature_extractor.state_dict(), f'extractor_model.bin')
     torch.save(label_predictor.state_dict(), f'predictor_model.bin')
 
-    print('epoch {:>3d}: train D loss: {:6.4f}, train F loss: {:6.4f}, acc {:6.4f}'.format(epoch, train_D_loss, train_F_loss, train_acc))
+    with open('log.txt', 'a') as f:
+        f.write('epoch {:>3d}: train D loss: {:6.4f}, train F loss: {:6.4f}, acc {:6.4f}\n'.format(epoch, train_D_loss, train_F_loss, train_acc))
 
+    pbar.set_postfix(
+        {
+            'train D loss': train_D_loss,
+            'train_F_loss': train_F_loss,
+            'train_acc': train_acc,
+        }
+    )
 #%%
 """# Inference
 
@@ -408,7 +445,7 @@ result = np.concatenate(result)
 
 # Generate your submission
 df = pd.DataFrame({'id': np.arange(0,len(result)), 'label': result})
-df.to_csv(output_filename,index=False)
+df.to_csv(config['output_filename'],index=False)
 
 #%%
 """# Visualization
