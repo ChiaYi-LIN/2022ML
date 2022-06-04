@@ -1,0 +1,1 @@
+Run all cells in "hw12_reinforcement_learning_english_version.ipynb" would be sufficient
